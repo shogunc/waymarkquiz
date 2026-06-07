@@ -44,11 +44,11 @@ A single React + TypeScript + Vite + Tailwind CSS + Framer Motion app, with thre
 views: host display, participant (player) view, and an admin/quiz-authoring UI.
 No custom backend server — clients talk directly to Firebase services:
 
-- **Firestore** — stores quizzes, questions, game sessions/state, and scores.
-  Also doubles as the real-time transport: the host writes state changes (current
-  question, phase, timer end-time, scores) to the session document; all clients
-  subscribe via `onSnapshot` and render whatever phase they observe.
-- **Firebase Storage** — question images and any other media.
+- **Firestore** — stores quizzes, questions (including their images, see below),
+  game sessions/state, and scores. Also doubles as the real-time transport: the
+  host writes state changes (current question, phase, timer end-time, scores)
+  to the session document; all clients subscribe via `onSnapshot` and render
+  whatever phase they observe.
 - **Firebase Auth** — simple shared-password (or similar) auth for the admin/
   quiz-authoring UI; anonymous auth to give each participant a stable identity
   for the duration of a session.
@@ -67,9 +67,17 @@ for free without building custom auth or per-person accounts.
   Includes a **live preview** rendered roughly as it'll appear on the host
   screen — catches readability issues (text too long, image too small/cropped
   oddly) before party night, while the content is still easy to tweak.
-- **Images**: uploaded from the admin's device to Firebase Storage (not linked
-  by URL) — keeps quizzes self-contained and safe from source images
-  disappearing or changing between authoring and the actual event.
+- **Images**: uploaded from the admin's device, **resized/compressed
+  client-side (e.g. via `<canvas>`) and stored as a base64 data-URI string
+  directly on the question document** — not linked by URL, and not Firebase
+  Storage. This keeps quizzes self-contained (safe from source images
+  disappearing between authoring and the actual event) and keeps the whole app
+  on Firestore alone, avoiding Firebase Storage's requirement to be on a
+  billing-enabled (Blaze) plan. The constraint this imposes: Firestore documents
+  cap out at 1 MiB and base64 adds ~37% overhead, so compressed images need to
+  land under roughly 700 KB raw — comfortably achievable with a resize to
+  ~1000-1200px wide at moderate JPEG quality, which also has the side benefit of
+  giving the host display consistently-sized images.
 - **Deletion guard**: deleting a question that's referenced by one or more
   quizzes is **blocked**, with the UI listing which quizzes use it — prevents
   silently shrinking a quiz you forgot was using that question. The author
@@ -157,7 +165,8 @@ assume a "typical" size; support anything from a handful of questions to dozens.
 
 **`questions/{questionId}`** — the shared library
 ```
-{ imageUrl, trivia, prompt, correctYear, createdAt, updatedAt }
+{ imageData, trivia, prompt, correctYear, createdAt, updatedAt }
+// imageData: base64 data-URI string (resized/compressed client-side; see Admin UI)
 ```
 
 **`quizzes/{quizId}`** — an ordered playlist of question IDs from the library

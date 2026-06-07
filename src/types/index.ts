@@ -3,7 +3,8 @@
 
 export interface Question {
   id: string
-  imageUrl: string
+  /** Base64 data-URI string; resized/compressed client-side before storage. */
+  imageData: string
   trivia: string
   prompt: string
   correctYear: number

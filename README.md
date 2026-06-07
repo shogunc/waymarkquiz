@@ -7,7 +7,8 @@ data model, and game flow.
 ## Stack
 
 Vite + React + TypeScript + Tailwind CSS + Framer Motion + Firebase
-(Firestore, Storage, Auth), deployed to Netlify.
+(Firestore, Auth), deployed to Netlify. Question images are stored as
+compressed base64 strings directly in Firestore — no Firebase Storage.
 
 ## Getting started
 
