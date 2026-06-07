@@ -1,0 +1,229 @@
+# Waymark Quiz
+
+A real-time, multiplayer trivia quiz app for parties and gatherings. One **host**
+runs the show on a shared screen (TV/projector); **participants** join and answer
+on their own phones. The twist: every answer is a **year**, and scoring rewards
+how close you get.
+
+## Core concept
+
+- The host's screen cycles through **question pages**: an image, a bit of trivia,
+  and a question whose answer is a specific year.
+- Participants get a fixed window of time to submit a year via their phone.
+- When time is up, the host's screen transitions to a **standings** view, ideally
+  with an animation showing rank changes (e.g. via Framer Motion).
+- Repeat until all questions are done, then show final results.
+
+## Scoring rule
+
+Answer is scored by distance from the correct year:
+
+```
+points = max(0, 10 - abs(correctYear - guessedYear))
+```
+
+Examples (correct = 1994): 1994 → 10, 1997 → 7, 2010 → 0.
+
+This logic is shared between client and server (used for live score previews and
+authoritative scoring) and should live in `shared/` as a single source of truth.
+
+## Audience & deployment
+
+- Primary use case: a work party / casual gathering where the host's laptop drives
+  a big screen and guests join from their own phones over the internet, via a
+  short **join code**.
+- Must be **hosted online** (not LAN-only) so it works across venues and networks.
+- Deployed as a static site on **Netlify**, backed by **Firestore** for both
+  persistence and real-time sync. This avoids needing a persistent custom server
+  (which Netlify can't host) — Firestore's `onSnapshot` listeners *are* the
+  real-time layer: clients subscribe to a session document and react to changes.
+
+## Planned architecture
+
+A single React + TypeScript + Vite + Tailwind CSS + Framer Motion app, with three
+views: host display, participant (player) view, and an admin/quiz-authoring UI.
+No custom backend server — clients talk directly to Firebase services:
+
+- **Firestore** — stores quizzes, questions, game sessions/state, and scores.
+  Also doubles as the real-time transport: the host writes state changes (current
+  question, phase, timer end-time, scores) to the session document; all clients
+  subscribe via `onSnapshot` and render whatever phase they observe.
+- **Firebase Storage** — question images and any other media.
+- **Firebase Auth** — simple shared-password (or similar) auth for the admin/
+  quiz-authoring UI; anonymous auth to give each participant a stable identity
+  for the duration of a session.
+- **`shared/`** types/constants — game state shape, Firestore document schemas,
+  and the scoring formula above, reused across the three views.
+
+## Admin / authoring UI
+
+CRUD on the question library and on quizzes (which assemble questions from that
+library — see Quiz library below), gated behind a single shared password.
+Simplest implementation: one Firebase Auth account whose credentials are shared
+with anyone trusted to author content — gets Firebase Auth's session handling
+for free without building custom auth or per-person accounts.
+
+- **Question editing**: form for image, trivia text, prompt, and correct year.
+  Includes a **live preview** rendered roughly as it'll appear on the host
+  screen — catches readability issues (text too long, image too small/cropped
+  oddly) before party night, while the content is still easy to tweak.
+- **Images**: uploaded from the admin's device to Firebase Storage (not linked
+  by URL) — keeps quizzes self-contained and safe from source images
+  disappearing or changing between authoring and the actual event.
+- **Deletion guard**: deleting a question that's referenced by one or more
+  quizzes is **blocked**, with the UI listing which quizzes use it — prevents
+  silently shrinking a quiz you forgot was using that question. The author
+  removes it from those quizzes first, then deletes it.
+
+### Authority model: host-authoritative
+
+The host's browser tab is the **single writer** for game-state transitions
+(advancing questions, ending the answer window, computing/advancing scores);
+everyone else only reads via listeners. This keeps things simple and needs no
+server-side functions. Trade-off: if the host's tab disconnects mid-game, the
+session stalls — acceptable for a casual party context (no host screen means no
+party either way). If this ever needs to be more robust (e.g. larger unattended
+events), revisit with Cloud Functions as a trusted authority instead.
+
+## Game flow (state machine)
+
+`lobby → question → answering → personal reveal → standings → (next question) →
+… → final podium`
+
+- **Lobby**: host shows the join code/QR; joined nicknames appear live on the
+  host screen as people connect (builds anticipation, lets host confirm everyone
+  made it in before starting).
+- **Question**: image + trivia + question shown on host screen; answer window
+  opens (fixed duration, set per quiz — not per question).
+- **Answering**: participants submit a guess via the drill-down picker (see
+  below). Answers lock in immediately on final selection — no edit/resubmit.
+- **Personal reveal**: each participant sees their own result first — their
+  guess vs. the correct year and points earned (or "you didn't answer in time"
+  for no-answer, which scores 0 — distinguished from a wrong-but-submitted
+  guess in the messaging, though both score 0 if far enough off).
+- **Standings**: host screen shows a **top-N leaderboard** with animated rank
+  changes (Framer Motion). Tied scores share the same rank — no tiebreaker.
+- **Final podium**: a celebratory animated reveal (e.g. countdown 3rd → 1st)
+  rather than reusing the plain standings view.
+
+The host drives every transition (host-authoritative — see above) and writes
+the resulting phase to the session document; other clients only render whatever
+phase they observe — they never infer phase from their own timers. Host controls
+are intentionally minimal: **start** and **next** only (no pause/skip/back),
+which keeps the state machine small and avoids sync edge cases. Natural pacing
+for banter between questions comes from the host choosing when to hit "next"
+from the standings screen.
+
+## Joining a session
+
+- Participants join via a short **join code** (e.g. 4-6 characters), entered
+  manually or scanned via QR code linking straight to the join screen.
+- **Identity**: nickname only (no avatars in v1).
+- **Joining window**: lobby only — join codes stop working once the host starts
+  the quiz. No mid-quiz joins, no "catching up" logic needed.
+- **Reconnection**: a participant ID is persisted client-side (e.g.
+  localStorage) so refreshing, locking the phone, or a Wi-Fi hiccup lets them
+  rejoin under the same nickname with their score intact. This matters in
+  practice — phones lock constantly at parties.
+
+## Answering a question
+
+Rather than typing a 4-digit year or dragging a slider (fiddly and slow on a
+phone, and this is a timed/competitive context), participants pick their answer
+through a **drill-down of large tap targets**:
+
+1. Century (e.g. "1900s" / "2000s")
+2. Decade within century (e.g. "90s", "00s", "10s")
+3. Exact year within decade
+
+Each step can be backed out of if they change their mind. The final tap **locks
+the answer in immediately** — deliberately snappy, matching the "quick decision"
+spirit of the format (no confirm step, no edit-after-submit).
+
+The selectable range is fixed across all quizzes — **1900–2026** — so the
+drill-down UI structure (number of centuries/decades) never has to vary per
+quiz or question. (Bump the upper bound as years pass.)
+
+## Quiz library
+
+Questions are authored **independently** as a shared library; quizzes are built
+by picking and ordering questions from that library (a "playlist" pattern, not
+ownership) — so a question can be reused across multiple quizzes, and editing
+one updates it everywhere it appears. The host then picks which quiz to run
+when starting a session. Quiz length varies — the data model and UI shouldn't
+assume a "typical" size; support anything from a handful of questions to dozens.
+
+## Data model (Firestore)
+
+**`questions/{questionId}`** — the shared library
+```
+{ imageUrl, trivia, prompt, correctYear, createdAt, updatedAt }
+```
+
+**`quizzes/{quizId}`** — an ordered playlist of question IDs from the library
+```
+{ title, description?, questionIds: [qId, qId, ...], createdAt, updatedAt }
+```
+Order is simply array order — reordering in the admin UI just rewrites this
+array. To run a session, resolve `questionIds[currentQuestionIndex]` against
+the library (the full ID list is known up front, so questions can be prefetched).
+
+**`sessions/{sessionId}`** — the live document everything syncs around
+```
+{
+  joinCode,             // short code participants enter
+  hostToken,            // random secret; only the creating browser holds it
+  quizId,
+  phase,                // 'lobby' | 'question' | 'answering' | 'reveal'
+                        // | 'standings' | 'podium' | 'ended'
+  currentQuestionIndex,
+  answerWindowEndsAt,   // timestamp; clients render their own countdown from this
+  createdAt
+}
+```
+This doc *is* the real-time sync mechanism — the host writes to it, everyone
+else listens via `onSnapshot` and renders whatever `phase` they observe.
+
+**`sessions/{sessionId}/participants/{participantId}`**
+```
+{ nickname, joinedAt, totalScore }
+```
+`participantId` is generated client-side and persisted in localStorage — the
+basis for reconnection-with-identity (re-enter the join code, same ID, same
+nickname and score).
+
+**`sessions/{sessionId}/answers/{questionIndex}_{participantId}`** — flat, not
+nested under participants, so the host can query "all answers for the current
+question" with a single `.where()` (no collection-group query needed)
+```
+{ participantId, questionIndex, guessedYear, submittedAt, pointsEarned }
+```
+
+### Write ownership (drives security rules)
+
+- **Participants** write their own `guess` (raw `guessedYear`) — that's their
+  data, and a tampered guess only hurts the guesser.
+- **The host** computes `pointsEarned` (via the shared scoring formula) and
+  writes both that and each participant's updated `totalScore` — keeping
+  scoring authoritative and outside participants' reach.
+- **`hostToken`**: join codes are short and guessable by design (you're handing
+  them out to a room), so the join code alone can't be the only gate on host
+  actions. A random token generated at session creation, held only in the
+  host's browser, should be required by security rules for any write to
+  `phase`, `currentQuestionIndex`, or scores.
+
+## Visual style
+
+Clean, modern, a bit playful/game-show-like: bold colors, big legible type
+(important on both a projector and small phone screens), and animation used
+purposefully (rank changes, reveals, podium) rather than decoratively.
+
+## Conventions
+
+*(To be filled in as the project takes shape — package manager, lint/format
+tooling, test commands, folder layout, etc.)*
+
+## Status
+
+Early planning stage — no code yet. This file describes the intended direction;
+update it as real decisions are made or the design changes.
