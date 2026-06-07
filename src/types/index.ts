@@ -33,7 +33,8 @@ export type SessionPhase =
 export interface Session {
   id: string
   joinCode: string
-  hostToken: string
+  /** The host's anonymous-auth UID — security rules gate state/score writes on this. */
+  hostUid: string
   quizId: string
   phase: SessionPhase
   currentQuestionIndex: number
@@ -43,6 +44,7 @@ export interface Session {
 }
 
 export interface Participant {
+  /** The participant's anonymous-auth UID — also the document ID. */
   id: string
   nickname: string
   joinedAt: number

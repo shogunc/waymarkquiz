@@ -181,7 +181,7 @@ the library (the full ID list is known up front, so questions can be prefetched)
 ```
 {
   joinCode,             // short code participants enter
-  hostToken,            // random secret; only the creating browser holds it
+  hostUid,              // host's anonymous-auth UID — see Identity model below
   quizId,
   phase,                // 'lobby' | 'question' | 'answering' | 'reveal'
                         // | 'standings' | 'podium' | 'ended'
@@ -193,13 +193,11 @@ the library (the full ID list is known up front, so questions can be prefetched)
 This doc *is* the real-time sync mechanism — the host writes to it, everyone
 else listens via `onSnapshot` and renders whatever `phase` they observe.
 
-**`sessions/{sessionId}/participants/{participantId}`**
+**`sessions/{sessionId}/participants/{participantId}`** — `participantId` is
+the participant's anonymous-auth UID (`request.auth.uid`), not a random ID
 ```
 { nickname, joinedAt, totalScore }
 ```
-`participantId` is generated client-side and persisted in localStorage — the
-basis for reconnection-with-identity (re-enter the join code, same ID, same
-nickname and score).
 
 **`sessions/{sessionId}/answers/{questionIndex}_{participantId}`** — flat, not
 nested under participants, so the host can query "all answers for the current
@@ -208,18 +206,32 @@ question" with a single `.where()` (no collection-group query needed)
 { participantId, questionIndex, guessedYear, submittedAt, pointsEarned }
 ```
 
-### Write ownership (drives security rules)
+### Identity model: Anonymous Auth (drives security rules)
 
-- **Participants** write their own `guess` (raw `guessedYear`) — that's their
-  data, and a tampered guess only hurts the guesser.
-- **The host** computes `pointsEarned` (via the shared scoring formula) and
-  writes both that and each participant's updated `totalScore` — keeping
-  scoring authoritative and outside participants' reach.
-- **`hostToken`**: join codes are short and guessable by design (you're handing
-  them out to a room), so the join code alone can't be the only gate on host
-  actions. A random token generated at session creation, held only in the
-  host's browser, should be required by security rules for any write to
-  `phase`, `currentQuestionIndex`, or scores.
+Hosts and participants both sign in via **Firebase Anonymous Auth** on first
+visit — no accounts, no passwords, just a real `request.auth.uid` that
+Firestore security rules can check directly. This replaces an earlier
+random-token design (a `hostToken` + custom localStorage participant ID) with
+something rules can actually verify, and gets reconnection "for free": Firebase
+Auth persists the anonymous UID in the browser's local storage, so refreshing
+or relaunching the app on the same device restores the same identity —
+satisfying the reconnection requirement (see Joining a session) without any
+custom bookkeeping.
+
+This shapes the write-ownership rules:
+- **The host's UID is stored as `hostUid`** on the session document at creation
+  time. Only `request.auth.uid == resource.data.hostUid` may write `phase`,
+  `currentQuestionIndex`, `answerWindowEndsAt`, `pointsEarned`, or
+  `totalScore` — keeping game-state transitions and scoring authoritative.
+- **A participant may only create/update `participants/{request.auth.uid}`**
+  (their own document — nickname, join time) and **only create answer documents
+  where `participantId == request.auth.uid`** (their own raw guess). They can
+  never write `pointsEarned` or another participant's data — a tampered guess
+  only hurts the guesser, but a tampered score is rejected outright.
+- **`questions`/`quizzes`**: world-readable (host and participant clients need
+  to render quiz content during a session), writable only by the signed-in
+  admin (the shared Firebase Auth email/password account from the Admin UI
+  section — distinguished from anonymous users by `request.auth.token.firebase.sign_in_provider`).
 
 ## Visual style
 

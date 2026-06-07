@@ -1,0 +1,94 @@
+rules_version = '2';
+
+// Identity model (see CLAUDE.md "Identity model: Anonymous Auth"):
+//  - The admin signs in with a shared email/password account (Firebase Auth).
+//  - Hosts and participants both sign in anonymously, giving every browser a
+//    real, rule-checkable request.auth.uid. A session's `hostUid` field and a
+//    participant doc's ID (== their UID) are what rules check identity against.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      // The shared admin account is the only non-anonymous user in this app.
+      return signedIn() && request.auth.token.firebase.sign_in_provider != 'anonymous';
+    }
+
+    function isHostOf(session) {
+      return signedIn() && request.auth.uid == session.data.hostUid;
+    }
+
+    // ---- Question library & quizzes: world-readable, admin-writable ----
+    // World-readable because host and participant clients render quiz content
+    // (image/trivia/prompt/standings context) directly from these documents
+    // during a live session.
+
+    match /questions/{questionId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /quizzes/{quizId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ---- Sessions: host-authoritative game state ----
+
+    match /sessions/{sessionId} {
+      allow read: if true;
+
+      // Created by the host, who must claim themselves as hostUid up front.
+      allow create: if signedIn() && request.resource.data.hostUid == request.auth.uid;
+
+      // Only the claimed host may change session state (phase, current
+      // question, answer-window deadline, etc).
+      allow update: if isHostOf(resource);
+
+      allow delete: if false;
+
+      match /participants/{participantId} {
+        allow read: if true;
+
+        // A participant may only create/update their own document, and may
+        // never grant themselves points — totalScore starts at 0 and is from
+        // then on host-authoritative.
+        allow create: if signedIn()
+          && request.auth.uid == participantId
+          && request.resource.data.totalScore == 0;
+
+        allow update: if
+          // The participant may update their own non-scoring fields...
+          (signedIn() && request.auth.uid == participantId
+            && request.resource.data.totalScore == resource.data.totalScore)
+          // ...while only the host may change totalScore.
+          || isHostOf(get(/databases/$(database)/documents/sessions/$(sessionId)));
+
+        allow delete: if false;
+      }
+
+      match /answers/{answerId} {
+        allow read: if true;
+
+        // A participant may submit only their own raw guess, starting
+        // unscored — pointsEarned is filled in later by the host.
+        allow create: if signedIn()
+          && request.auth.uid == request.resource.data.participantId
+          && request.resource.data.pointsEarned == null;
+
+        // Only the host may fill in pointsEarned (authoritative scoring);
+        // the participant's own guess is immutable once submitted (answers
+        // lock in immediately — see "Answering a question" in CLAUDE.md).
+        allow update: if isHostOf(get(/databases/$(database)/documents/sessions/$(sessionId)))
+          && request.resource.data.participantId == resource.data.participantId
+          && request.resource.data.guessedYear == resource.data.guessedYear;
+
+        allow delete: if false;
+      }
+    }
+  }
+}
