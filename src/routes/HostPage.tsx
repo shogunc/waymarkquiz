@@ -9,8 +9,7 @@ import { scoreGuess } from '../lib/scoring'
 import { STRINGS } from '../lib/strings'
 import { QuizPicker } from './host/QuizPicker'
 import { LobbyView } from './host/LobbyView'
-import { PreviewView } from './host/PreviewView'
-import { AnsweringView } from './host/AnsweringView'
+import { QuestionView } from './host/QuestionView'
 import { ResultsView } from './host/ResultsView'
 import { StandingsView } from './host/StandingsView'
 import { PodiumView } from './host/PodiumView'
@@ -197,25 +196,17 @@ export function HostPage() {
         <LobbyView session={session} quiz={quiz} participants={participants} onStart={() => void handleStart()} starting={transitioning} strings={strings} />
       )}
 
-      {session && questions && session.phase === 'preview' && (
-        <PreviewView
-          question={questions[session.currentQuestionIndex]}
-          questionNumber={session.currentQuestionIndex + 1}
-          totalQuestions={questions.length}
-          onReveal={() => void handleReveal()}
-          revealing={transitioning}
-          strings={strings}
-        />
-      )}
-
-      {session && questions && session.phase === 'answering' && (
-        <AnsweringView
+      {session && questions && (session.phase === 'preview' || session.phase === 'answering') && (
+        <QuestionView
           session={session}
           question={questions[session.currentQuestionIndex]}
           questionNumber={session.currentQuestionIndex + 1}
           totalQuestions={questions.length}
           participants={participants}
           answers={answers}
+          revealed={session.phase === 'answering'}
+          onReveal={() => void handleReveal()}
+          revealing={transitioning}
           strings={strings}
         />
       )}

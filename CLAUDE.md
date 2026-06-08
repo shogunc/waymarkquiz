@@ -102,11 +102,14 @@ Synced session phases (written to the session document, driven by the host):
 - **Lobby**: host shows the join code/QR; joined nicknames appear live on the
   host screen as people connect (builds anticipation, lets host confirm everyone
   made it in before starting).
-- **Preview**: the host screen shows only the question's trivia — the image and
-  prompt stay hidden and the answer window hasn't opened yet — so the host can
-  read it aloud and build suspense. Participants just see a "get ready" message.
-  The host then taps **reveal** to show the question and open the answer window
-  at the same instant.
+- **Preview**: the host screen shows the image and trivia — everything except
+  the prompt itself, which stays hidden (its space reserved so nothing shifts
+  on reveal) — and the answer window hasn't opened yet, so the host can read
+  the trivia aloud and build suspense. Participants just see a "get ready"
+  message (the prompt is part of the question, so showing it early would be
+  giving away exactly what's being asked). The host then taps **reveal**,
+  which fades the prompt in and opens the answer window at the same instant —
+  in place, with no layout change, for a natural transition.
 - **Answering**: the question (image + trivia + prompt) appears on the host
   screen *and* the answer window opens at the same instant. Participants submit
   a guess via the drill-down picker (see below); answers lock in immediately on

@@ -21,8 +21,6 @@ export interface Strings {
     startQuiz: string
   }
   preview: {
-    questionXOfY: (current: number, total: number) => string
-    readTrivia: string
     revealQuestion: string
   }
   answering: {
@@ -95,8 +93,6 @@ const en: Strings = {
     startQuiz: 'Start quiz',
   },
   preview: {
-    questionXOfY: (current, total) => `Question ${current} of ${total}`,
-    readTrivia: 'Read the trivia aloud, then reveal the question to start the timer.',
     revealQuestion: 'Reveal question',
   },
   answering: {
@@ -168,8 +164,6 @@ const sv: Strings = {
     startQuiz: 'Starta quiz',
   },
   preview: {
-    questionXOfY: (current, total) => `Fråga ${current} av ${total}`,
-    readTrivia: 'Läs upp trivian, visa sedan frågan för att starta nedräkningen.',
     revealQuestion: 'Visa frågan',
   },
   answering: {
