@@ -17,18 +17,23 @@ export interface Quiz {
   title: string
   description?: string
   questionIds: string[]
+  /** How long participants get to answer each question in this quiz. */
+  answerDurationSeconds: number
   createdAt: number
   updatedAt: number
 }
 
-export type SessionPhase =
-  | 'lobby'
-  | 'question'
-  | 'answering'
-  | 'reveal'
-  | 'standings'
-  | 'podium'
-  | 'ended'
+/**
+ * Session-level phases — the synced states that drive what every client
+ * renders. Deliberately fewer than the conceptual steps in CLAUDE.md's game
+ * flow: "question" and "answering" collapse into one (`answering`), since the
+ * answer window opens the instant the question appears — there's no separate
+ * "preview" period. "Personal reveal" isn't a synced phase at all; it's a
+ * transient, participant-local state (shown once their own answer document
+ * gains a `pointsEarned` value), not something that needs to be globally
+ * synced via the session document.
+ */
+export type SessionPhase = 'lobby' | 'answering' | 'standings' | 'podium' | 'ended'
 
 export interface Session {
   id: string

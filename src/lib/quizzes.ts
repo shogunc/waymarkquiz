@@ -8,6 +8,7 @@ export type QuizInput = {
   title: string
   description?: string
   questionIds: string[]
+  answerDurationSeconds: number
 }
 
 export async function listQuizzes(): Promise<Quiz[]> {
@@ -20,14 +21,21 @@ export async function getQuiz(id: string): Promise<Quiz | null> {
   return snap.exists() ? { id: snap.id, ...(snap.data() as Omit<Quiz, 'id'>) } : null
 }
 
+// Firestore rejects `undefined` field values — drop `description` entirely when absent
+// rather than writing it as undefined (addDoc/updateDoc throw on undefined values).
+function toFirestoreData(input: QuizInput) {
+  const { description, ...rest } = input
+  return description === undefined ? rest : { ...rest, description }
+}
+
 export async function createQuiz(input: QuizInput): Promise<string> {
   const now = Date.now()
-  const ref = await addDoc(quizzesCol, { ...input, createdAt: now, updatedAt: now })
+  const ref = await addDoc(quizzesCol, { ...toFirestoreData(input), createdAt: now, updatedAt: now })
   return ref.id
 }
 
 export async function updateQuiz(id: string, input: QuizInput): Promise<void> {
-  await updateDoc(doc(quizzesCol, id), { ...input, updatedAt: Date.now() })
+  await updateDoc(doc(quizzesCol, id), { ...toFirestoreData(input), updatedAt: Date.now() })
 }
 
 export async function deleteQuiz(id: string): Promise<void> {

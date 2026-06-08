@@ -95,24 +95,33 @@ events), revisit with Cloud Functions as a trusted authority instead.
 
 ## Game flow (state machine)
 
-`lobby → question → answering → personal reveal → standings → (next question) →
-… → final podium`
+Synced session phases (written to the session document, driven by the host):
+
+`lobby → answering → standings → (next question) → … → podium → ended`
 
 - **Lobby**: host shows the join code/QR; joined nicknames appear live on the
   host screen as people connect (builds anticipation, lets host confirm everyone
   made it in before starting).
-- **Question**: image + trivia + question shown on host screen; answer window
-  opens (fixed duration, set per quiz — not per question).
-- **Answering**: participants submit a guess via the drill-down picker (see
-  below). Answers lock in immediately on final selection — no edit/resubmit.
-- **Personal reveal**: each participant sees their own result first — their
-  guess vs. the correct year and points earned (or "you didn't answer in time"
-  for no-answer, which scores 0 — distinguished from a wrong-but-submitted
-  guess in the messaging, though both score 0 if far enough off).
+- **Answering**: the question (image + trivia + prompt) appears on the host
+  screen *and* the answer window opens at the same instant — there's no separate
+  "preview" period, so "question" and "answering" collapse into one synced phase.
+  Participants submit a guess via the drill-down picker (see below); answers lock
+  in immediately on final selection — no edit/resubmit. Window length is fixed
+  per quiz (`answerDurationSeconds` on the quiz, not per question).
 - **Standings**: host screen shows a **top-N leaderboard** with animated rank
   changes (Framer Motion). Tied scores share the same rank — no tiebreaker.
-- **Final podium**: a celebratory animated reveal (e.g. countdown 3rd → 1st)
-  rather than reusing the plain standings view.
+- **Podium**: a celebratory animated reveal (e.g. countdown 3rd → 1st) rather
+  than reusing the plain standings view.
+
+**Personal reveal** — each participant seeing their own guess vs. the correct
+year and points earned (or "you didn't answer in time" for no-answer, which
+scores 0 — distinguished from a wrong-but-submitted guess in the messaging,
+though both score 0 if far enough off) — is *not* a synced session phase. It's
+a transient, participant-local state: each participant's client detects that
+their own answer document has gained a `pointsEarned` value (via `onSnapshot`)
+and shows the reveal locally, independent of what the host/session phase says.
+This keeps the synced state machine small while still giving everyone an
+individual moment before the shared standings appear.
 
 The host drives every transition (host-authoritative — see above) and writes
 the resulting phase to the session document; other clients only render whatever
@@ -171,7 +180,8 @@ assume a "typical" size; support anything from a handful of questions to dozens.
 
 **`quizzes/{quizId}`** — an ordered playlist of question IDs from the library
 ```
-{ title, description?, questionIds: [qId, qId, ...], createdAt, updatedAt }
+{ title, description?, questionIds: [qId, qId, ...], answerDurationSeconds, createdAt, updatedAt }
+// answerDurationSeconds: fixed answer-window length for every question in this quiz
 ```
 Order is simply array order — reordering in the admin UI just rewrites this
 array. To run a session, resolve `questionIds[currentQuestionIndex]` against
@@ -183,8 +193,8 @@ the library (the full ID list is known up front, so questions can be prefetched)
   joinCode,             // short code participants enter
   hostUid,              // host's anonymous-auth UID — see Identity model below
   quizId,
-  phase,                // 'lobby' | 'question' | 'answering' | 'reveal'
-                        // | 'standings' | 'podium' | 'ended'
+  phase,                // 'lobby' | 'answering' | 'standings' | 'podium' | 'ended'
+                        // (see Game flow above — "personal reveal" is participant-local, not synced)
   currentQuestionIndex,
   answerWindowEndsAt,   // timestamp; clients render their own countdown from this
   createdAt
