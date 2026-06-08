@@ -20,10 +20,22 @@ export interface Strings {
     starting: string
     startQuiz: string
   }
+  preview: {
+    questionXOfY: (current: number, total: number) => string
+    readTrivia: string
+    revealQuestion: string
+  }
   answering: {
     questionXOfY: (current: number, total: number) => string
     secondsLeft: string
     xOfYAnswered: (answered: number, total: number) => string
+  }
+  results: {
+    title: string
+    correctYearWas: string
+    closestGuesses: string
+    pts: string
+    continue: string
   }
   standings: {
     title: string
@@ -51,6 +63,8 @@ export interface Strings {
     lockedIn: (year: number) => string
     waitingForOthers: string
     lockingIn: string
+    getReady: string
+    resultsUp: string
     standingsUp: string
     finalResultsUp: string
     thanksForPlaying: (nickname: string) => string
@@ -80,10 +94,22 @@ const en: Strings = {
     starting: 'Starting…',
     startQuiz: 'Start quiz',
   },
+  preview: {
+    questionXOfY: (current, total) => `Question ${current} of ${total}`,
+    readTrivia: 'Read the trivia aloud, then reveal the question to start the timer.',
+    revealQuestion: 'Reveal question',
+  },
   answering: {
     questionXOfY: (current, total) => `Question ${current} of ${total}`,
     secondsLeft: 'seconds left',
     xOfYAnswered: (answered, total) => `${answered} of ${total} answered`,
+  },
+  results: {
+    title: 'Correct answer',
+    correctYearWas: 'The correct year was',
+    closestGuesses: 'Closest guesses',
+    pts: 'pts',
+    continue: 'Continue to standings',
   },
   standings: {
     title: 'Standings',
@@ -110,6 +136,8 @@ const en: Strings = {
     lockedIn: (year) => `Locked in: ${year}`,
     waitingForOthers: 'Waiting for the other players…',
     lockingIn: 'Locking in…',
+    getReady: 'Get ready — the next question is coming up!',
+    resultsUp: 'The answer is revealed on the big screen!',
     standingsUp: 'Standings are up on the big screen!',
     finalResultsUp: 'The final results are on the big screen! 🏆',
     thanksForPlaying: (nickname) => `Thanks for playing, ${nickname}!`,
@@ -139,10 +167,22 @@ const sv: Strings = {
     starting: 'Startar…',
     startQuiz: 'Starta quiz',
   },
+  preview: {
+    questionXOfY: (current, total) => `Fråga ${current} av ${total}`,
+    readTrivia: 'Läs upp trivian, visa sedan frågan för att starta nedräkningen.',
+    revealQuestion: 'Visa frågan',
+  },
   answering: {
     questionXOfY: (current, total) => `Fråga ${current} av ${total}`,
     secondsLeft: 'sekunder kvar',
     xOfYAnswered: (answered, total) => `${answered} av ${total} har svarat`,
+  },
+  results: {
+    title: 'Rätt svar',
+    correctYearWas: 'Rätt årtal var',
+    closestGuesses: 'Närmast gissat',
+    pts: 'p',
+    continue: 'Fortsätt till ställningen',
   },
   standings: {
     title: 'Ställning',
@@ -169,6 +209,8 @@ const sv: Strings = {
     lockedIn: (year) => `Låst: ${year}`,
     waitingForOthers: 'Väntar på de andra spelarna…',
     lockingIn: 'Låser…',
+    getReady: 'Gör dig redo — nästa fråga är på väg!',
+    resultsUp: 'Svaret visas på storbildsskärmen!',
     standingsUp: 'Ställningen visas på storbildsskärmen!',
     finalResultsUp: 'Slutresultatet visas på storbildsskärmen! 🏆',
     thanksForPlaying: (nickname) => `Tack för att du spelade, ${nickname}!`,

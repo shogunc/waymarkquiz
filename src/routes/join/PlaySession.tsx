@@ -33,17 +33,17 @@ export function PlaySession({ sessionId, uid }: { sessionId: string; uid: string
 
   // Track our own answer to the question currently in play.
   useEffect(() => {
-    if (!session || (session.phase !== 'answering' && session.phase !== 'standings')) {
+    if (!session || (session.phase !== 'answering' && session.phase !== 'results' && session.phase !== 'standings')) {
       setAnswer(null)
       return
     }
     return subscribeToAnswer(sessionId, uid, session.currentQuestionIndex, setAnswer)
   }, [sessionId, uid, session?.phase, session?.currentQuestionIndex])
 
-  // Personal reveal: a transient, local moment shown once when the host moves to standings
-  // for a question we just played — independent of the synced session phase (see CLAUDE.md).
+  // Personal reveal: a transient, local moment shown once when the host moves to the results
+  // screen for a question we just played — independent of the synced session phase (see CLAUDE.md).
   useEffect(() => {
-    if (!session || session.phase !== 'standings') return
+    if (!session || session.phase !== 'results') return
     if (seenStandingsFor.current === session.currentQuestionIndex) return
     seenStandingsFor.current = session.currentQuestionIndex
     setRevealQuestionIndex(session.currentQuestionIndex)
@@ -80,6 +80,10 @@ export function PlaySession({ sessionId, uid }: { sessionId: string; uid: string
     )
   }
 
+  if (session.phase === 'preview') {
+    return <LookAtScreen message={s.getReady} totalScore={participant.totalScore} strings={strings} />
+  }
+
   if (session.phase === 'answering' && questions) {
     const question = questions[session.currentQuestionIndex]
     if (answer) {
@@ -99,10 +103,14 @@ export function PlaySession({ sessionId, uid }: { sessionId: string; uid: string
     )
   }
 
-  if (session.phase === 'standings' && questions) {
+  if (session.phase === 'results' && questions) {
     if (revealQuestionIndex === session.currentQuestionIndex) {
       return <PersonalReveal answer={answer} question={questions[session.currentQuestionIndex]} strings={strings} />
     }
+    return <LookAtScreen message={s.resultsUp} totalScore={participant.totalScore} strings={strings} />
+  }
+
+  if (session.phase === 'standings') {
     return <LookAtScreen message={s.standingsUp} totalScore={participant.totalScore} strings={strings} />
   }
 

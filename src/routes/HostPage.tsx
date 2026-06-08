@@ -9,7 +9,9 @@ import { scoreGuess } from '../lib/scoring'
 import { STRINGS } from '../lib/strings'
 import { QuizPicker } from './host/QuizPicker'
 import { LobbyView } from './host/LobbyView'
+import { PreviewView } from './host/PreviewView'
 import { AnsweringView } from './host/AnsweringView'
+import { ResultsView } from './host/ResultsView'
 import { StandingsView } from './host/StandingsView'
 import { PodiumView } from './host/PodiumView'
 import type { Answer, Language, Participant, Question, Quiz, Session } from '../types'
@@ -46,32 +48,41 @@ export function HostPage() {
     return subscribeToParticipants(session.id, setParticipants)
   }, [session?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Track answers for whichever question is currently live.
+  // Track answers for whichever question is currently live or just closed (results screen still shows them).
   useEffect(() => {
-    if (!session || session.phase !== 'answering') {
+    if (!session || (session.phase !== 'answering' && session.phase !== 'results')) {
       setAnswers([])
       return
     }
     return subscribeToAnswersForQuestion(session.id, session.currentQuestionIndex, setAnswers)
   }, [session?.id, session?.phase, session?.currentQuestionIndex])
 
-  // When the answer window closes, score this question's answers exactly once, then move to standings.
+  // Score this question's answers exactly once — either when everyone has answered, or when the
+  // answer window closes, whichever comes first — then move on to the results screen.
   useEffect(() => {
     if (!session || !quiz || !questions) return
     if (session.phase !== 'answering' || session.answerWindowEndsAt === null) return
     if (scoredQuestionIndex.current === session.currentQuestionIndex) return
 
-    const msRemaining = session.answerWindowEndsAt - Date.now()
     const questionIndex = session.currentQuestionIndex
     const question = questions[questionIndex]
+    const activeSession = session
 
-    const id = setTimeout(() => {
+    function trigger() {
+      if (scoredQuestionIndex.current === questionIndex) return
       scoredQuestionIndex.current = questionIndex
-      void scoreCurrentQuestion(session, question, questionIndex)
-    }, Math.max(0, msRemaining))
+      void scoreCurrentQuestion(activeSession, question, questionIndex)
+    }
 
+    if (participants.length > 0 && answers.length >= participants.length) {
+      trigger()
+      return
+    }
+
+    const msRemaining = session.answerWindowEndsAt - Date.now()
+    const id = setTimeout(trigger, Math.max(0, msRemaining))
     return () => clearTimeout(id)
-  }, [session, quiz, questions]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [session, quiz, questions, answers, participants]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function scoreCurrentQuestion(activeSession: Session, question: Question, questionIndex: number) {
     setTransitioning(true)
@@ -91,7 +102,7 @@ export function HostPage() {
         await setParticipantScore(activeSession.id, participant.id, participant.totalScore + points)
       }
 
-      await patchSession(activeSession.id, { phase: 'standings', answerWindowEndsAt: null })
+      await patchSession(activeSession.id, { phase: 'results', answerWindowEndsAt: null })
     } catch (e) {
       setError(String(e))
     } finally {
@@ -119,13 +130,31 @@ export function HostPage() {
     setTransitioning(true)
     try {
       await patchSession(session.id, {
-        phase: 'answering',
+        phase: 'preview',
         currentQuestionIndex: 0,
+        answerWindowEndsAt: null,
+      })
+    } finally {
+      setTransitioning(false)
+    }
+  }
+
+  async function handleReveal() {
+    if (!session) return
+    setTransitioning(true)
+    try {
+      await patchSession(session.id, {
+        phase: 'answering',
         answerWindowEndsAt: Date.now() + session.answerDurationSeconds * 1000,
       })
     } finally {
       setTransitioning(false)
     }
+  }
+
+  async function handleShowStandings() {
+    if (!session) return
+    await patchSession(session.id, { phase: 'standings' })
   }
 
   async function handleNext() {
@@ -136,9 +165,9 @@ export function HostPage() {
       if (nextIndex < questions.length) {
         scoredQuestionIndex.current = null
         await patchSession(session.id, {
-          phase: 'answering',
+          phase: 'preview',
           currentQuestionIndex: nextIndex,
-          answerWindowEndsAt: Date.now() + session.answerDurationSeconds * 1000,
+          answerWindowEndsAt: null,
         })
       } else {
         await patchSession(session.id, { phase: 'podium', answerWindowEndsAt: null })
@@ -168,6 +197,17 @@ export function HostPage() {
         <LobbyView session={session} quiz={quiz} participants={participants} onStart={() => void handleStart()} starting={transitioning} strings={strings} />
       )}
 
+      {session && questions && session.phase === 'preview' && (
+        <PreviewView
+          question={questions[session.currentQuestionIndex]}
+          questionNumber={session.currentQuestionIndex + 1}
+          totalQuestions={questions.length}
+          onReveal={() => void handleReveal()}
+          revealing={transitioning}
+          strings={strings}
+        />
+      )}
+
       {session && questions && session.phase === 'answering' && (
         <AnsweringView
           session={session}
@@ -176,6 +216,17 @@ export function HostPage() {
           totalQuestions={questions.length}
           participants={participants}
           answers={answers}
+          strings={strings}
+        />
+      )}
+
+      {session && questions && session.phase === 'results' && (
+        <ResultsView
+          question={questions[session.currentQuestionIndex]}
+          participants={participants}
+          answers={answers}
+          onContinue={() => void handleShowStandings()}
+          advancing={transitioning}
           strings={strings}
         />
       )}

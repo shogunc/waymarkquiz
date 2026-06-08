@@ -23,15 +23,20 @@ export interface Quiz {
 
 /**
  * Session-level phases — the synced states that drive what every client
- * renders. Deliberately fewer than the conceptual steps in CLAUDE.md's game
- * flow: "question" and "answering" collapse into one (`answering`), since the
- * answer window opens the instant the question appears — there's no separate
- * "preview" period. "Personal reveal" isn't a synced phase at all; it's a
- * transient, participant-local state (shown once their own answer document
- * gains a `pointsEarned` value), not something that needs to be globally
- * synced via the session document.
+ * renders. "Personal reveal" isn't a synced phase at all; it's a transient,
+ * participant-local state (shown once their own answer document gains a
+ * `pointsEarned` value, during `results`), not something that needs to be
+ * globally synced via the session document.
+ *
+ * `preview`: the question's trivia is shown so the host can read it aloud,
+ * but the image/prompt stay hidden and the answer window hasn't opened yet.
+ * `answering`: the host has revealed the question; the countdown and answer
+ * window are both running. `results`: the answer window has closed and this
+ * question's answers are scored — the host screen shows the correct year and
+ * this round's closest guesses (and participants get their personal reveal)
+ * before moving on to the running standings.
  */
-export type SessionPhase = 'lobby' | 'answering' | 'standings' | 'podium' | 'ended'
+export type SessionPhase = 'lobby' | 'preview' | 'answering' | 'results' | 'standings' | 'podium' | 'ended'
 
 /** Display language for the host screen and participant views, chosen by the host at session creation. */
 export type Language = 'en' | 'sv'

@@ -97,19 +97,30 @@ events), revisit with Cloud Functions as a trusted authority instead.
 
 Synced session phases (written to the session document, driven by the host):
 
-`lobby → answering → standings → (next question) → … → podium → ended`
+`lobby → preview → answering → results → standings → (next question: preview) → … → podium → ended`
 
 - **Lobby**: host shows the join code/QR; joined nicknames appear live on the
   host screen as people connect (builds anticipation, lets host confirm everyone
   made it in before starting).
+- **Preview**: the host screen shows only the question's trivia — the image and
+  prompt stay hidden and the answer window hasn't opened yet — so the host can
+  read it aloud and build suspense. Participants just see a "get ready" message.
+  The host then taps **reveal** to show the question and open the answer window
+  at the same instant.
 - **Answering**: the question (image + trivia + prompt) appears on the host
-  screen *and* the answer window opens at the same instant — there's no separate
-  "preview" period, so "question" and "answering" collapse into one synced phase.
-  Participants submit a guess via the drill-down picker (see below); answers lock
-  in immediately on final selection — no edit/resubmit. Window length is fixed
-  per session (`answerDurationSeconds`, chosen by the host when starting the
-  session — see Joining/starting a session below — and applied to every
-  question in that run).
+  screen *and* the answer window opens at the same instant. Participants submit
+  a guess via the drill-down picker (see below); answers lock in immediately on
+  final selection — no edit/resubmit. Window length is fixed per session
+  (`answerDurationSeconds`, chosen by the host when starting the session — see
+  Joining/starting a session below — and applied to every question in that run),
+  but the round ends as soon as *either* the timer runs out *or* every
+  participant has answered — whichever comes first — so a quick-fingered group
+  isn't stuck waiting out the clock.
+- **Results**: once the round ends, the host scores the answers, then shows the
+  correct year and this question's closest guesses (top scorers for *that*
+  question specifically). This is also the moment every participant gets their
+  personal reveal (see below). The host then taps **continue** to move to the
+  running standings.
 - **Standings**: host screen shows a **top-N leaderboard** with animated rank
   changes (Framer Motion). Tied scores share the same rank — no tiebreaker.
 - **Podium**: a celebratory animated reveal (e.g. countdown 3rd → 1st) rather
@@ -121,17 +132,19 @@ scores 0 — distinguished from a wrong-but-submitted guess in the messaging,
 though both score 0 if far enough off) — is *not* a synced session phase. It's
 a transient, participant-local state: each participant's client detects that
 their own answer document has gained a `pointsEarned` value (via `onSnapshot`)
-and shows the reveal locally, independent of what the host/session phase says.
-This keeps the synced state machine small while still giving everyone an
+and shows the reveal locally — timed to coincide with the host's results
+screen, but independent of what the host/session phase says. This keeps the
+synced state machine driven by simple host taps while still giving everyone an
 individual moment before the shared standings appear.
 
 The host drives every transition (host-authoritative — see above) and writes
 the resulting phase to the session document; other clients only render whatever
 phase they observe — they never infer phase from their own timers. Host controls
-are intentionally minimal: **start** and **next** only (no pause/skip/back),
-which keeps the state machine small and avoids sync edge cases. Natural pacing
-for banter between questions comes from the host choosing when to hit "next"
-from the standings screen.
+are intentionally minimal — **start**, **reveal**, **continue** (results →
+standings), and **next** (standings → next question's preview, or → podium on
+the last question) — no pause/skip/back, which keeps the state machine small
+and avoids sync edge cases. Natural pacing for banter between questions comes
+from the host choosing when to tap through these steps.
 
 ## Joining a session
 
@@ -194,7 +207,7 @@ the library (the full ID list is known up front, so questions can be prefetched)
   joinCode,             // short code participants enter
   hostUid,              // host's anonymous-auth UID — see Identity model below
   quizId,
-  phase,                // 'lobby' | 'answering' | 'standings' | 'podium' | 'ended'
+  phase,                // 'lobby' | 'preview' | 'answering' | 'results' | 'standings' | 'podium' | 'ended'
                         // (see Game flow above — "personal reveal" is participant-local, not synced)
   language,             // chosen by the host at session creation; drives which strings every client renders
   answerDurationSeconds,// chosen by the host at session creation; fixed answer-window length for every question
