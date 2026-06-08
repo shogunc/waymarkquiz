@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import type { Strings } from '../../lib/strings'
 
 // The selectable range is fixed across all quizzes (see CLAUDE.md "Answering a
 // question") so the drill-down structure never has to vary per quiz/question.
@@ -22,17 +23,14 @@ function yearsIn(decade: number): number[] {
   return range(decade, Math.min(decade + 9, MAX_YEAR), 1)
 }
 
-function decadeLabel(decade: number): string {
-  return `${String(decade % 100).padStart(2, '0')}s`
-}
-
 type Step = { kind: 'century' } | { kind: 'decade'; century: number } | { kind: 'year'; century: number; decade: number }
 
 const gridButton =
   'rounded-2xl bg-slate-800 px-4 py-6 text-2xl font-semibold hover:bg-slate-700 active:bg-indigo-600 transition-colors'
 
-export function YearPicker({ onPick }: { onPick: (year: number) => void }) {
+export function YearPicker({ onPick, strings }: { onPick: (year: number) => void; strings: Strings }) {
   const [step, setStep] = useState<Step>({ kind: 'century' })
+  const s = strings.yearPicker
 
   function back() {
     if (step.kind === 'decade') setStep({ kind: 'century' })
@@ -44,13 +42,13 @@ export function YearPicker({ onPick }: { onPick: (year: number) => void }) {
       <div className="flex items-center gap-3">
         {step.kind !== 'century' && (
           <button onClick={back} className="rounded-lg border border-slate-700 px-3 py-2 text-sm hover:bg-slate-800">
-            ← Back
+            {s.back}
           </button>
         )}
         <p className="text-slate-400">
-          {step.kind === 'century' && 'Pick a century'}
-          {step.kind === 'decade' && `Pick a decade in the ${step.century}s`}
-          {step.kind === 'year' && `Pick the exact year in the ${decadeLabel(step.decade)}`}
+          {step.kind === 'century' && s.pickCentury}
+          {step.kind === 'decade' && s.pickDecadeIn(step.century)}
+          {step.kind === 'year' && s.pickYearIn(s.decadeLabel(step.decade))}
         </p>
       </div>
 
@@ -58,7 +56,7 @@ export function YearPicker({ onPick }: { onPick: (year: number) => void }) {
         <div className="grid grid-cols-2 gap-3">
           {CENTURIES.map((century) => (
             <button key={century} className={gridButton} onClick={() => setStep({ kind: 'decade', century })}>
-              {century}s
+              {s.centuryLabel(century)}
             </button>
           ))}
         </div>
@@ -68,7 +66,7 @@ export function YearPicker({ onPick }: { onPick: (year: number) => void }) {
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {decadesIn(step.century).map((decade) => (
             <button key={decade} className={gridButton} onClick={() => setStep({ kind: 'year', century: step.century, decade })}>
-              {decadeLabel(decade)}
+              {s.decadeLabel(decade)}
             </button>
           ))}
         </div>

@@ -35,6 +35,9 @@ export interface Quiz {
  */
 export type SessionPhase = 'lobby' | 'answering' | 'standings' | 'podium' | 'ended'
 
+/** Display language for the host screen and participant views, chosen by the host at session creation. */
+export type Language = 'en' | 'sv'
+
 export interface Session {
   id: string
   joinCode: string
@@ -42,6 +45,8 @@ export interface Session {
   hostUid: string
   quizId: string
   phase: SessionPhase
+  /** Chosen by the host when starting the session; drives which strings every client renders. */
+  language: Language
   currentQuestionIndex: number
   /** Epoch ms; clients render their own countdown from this. */
   answerWindowEndsAt: number | null

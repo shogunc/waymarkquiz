@@ -6,12 +6,13 @@ import { subscribeToAnswersForQuestion, scoreAnswer } from '../lib/answers'
 import { getQuiz } from '../lib/quizzes'
 import { getQuestion } from '../lib/questions'
 import { scoreGuess } from '../lib/scoring'
+import { STRINGS } from '../lib/strings'
 import { QuizPicker } from './host/QuizPicker'
 import { LobbyView } from './host/LobbyView'
 import { AnsweringView } from './host/AnsweringView'
 import { StandingsView } from './host/StandingsView'
 import { PodiumView } from './host/PodiumView'
-import type { Answer, Participant, Question, Quiz, Session } from '../types'
+import type { Answer, Language, Participant, Question, Quiz, Session } from '../types'
 
 export function HostPage() {
   const [hostUid, setHostUid] = useState<string | null>(null)
@@ -98,12 +99,12 @@ export function HostPage() {
     }
   }
 
-  async function handlePickQuiz(picked: Quiz) {
+  async function handlePickQuiz(picked: Quiz, language: Language) {
     if (!hostUid) return
     setCreating(true)
     setError(null)
     try {
-      const created = await createSession(picked.id, hostUid)
+      const created = await createSession(picked.id, hostUid, language)
       setQuiz(picked)
       setSession(created)
     } catch (e) {
@@ -152,14 +153,17 @@ export function HostPage() {
     await patchSession(session.id, { phase: 'ended' })
   }
 
+  const strings = STRINGS[session?.language ?? 'en']
+  const s = strings.sessionEnded
+
   return (
     <main className="flex min-h-svh flex-col items-center justify-center gap-6 bg-slate-950 p-6 text-slate-100">
       {error && <p className="rounded-lg border border-red-900 bg-red-950 p-3 text-sm text-red-300">{error}</p>}
 
-      {!session && hostUid && <QuizPicker onPick={(q) => void handlePickQuiz(q)} busy={creating} />}
+      {!session && hostUid && <QuizPicker onPick={(q, language) => void handlePickQuiz(q, language)} busy={creating} />}
 
       {session && quiz && session.phase === 'lobby' && (
-        <LobbyView session={session} quiz={quiz} participants={participants} onStart={() => void handleStart()} starting={transitioning} />
+        <LobbyView session={session} quiz={quiz} participants={participants} onStart={() => void handleStart()} starting={transitioning} strings={strings} />
       )}
 
       {session && questions && session.phase === 'answering' && (
@@ -170,6 +174,7 @@ export function HostPage() {
           totalQuestions={questions.length}
           participants={participants}
           answers={answers}
+          strings={strings}
         />
       )}
 
@@ -179,15 +184,16 @@ export function HostPage() {
           isLastQuestion={session.currentQuestionIndex >= questions.length - 1}
           onNext={() => void handleNext()}
           advancing={transitioning}
+          strings={strings}
         />
       )}
 
-      {session && session.phase === 'podium' && <PodiumView participants={participants} onEnd={() => void handleEnd()} />}
+      {session && session.phase === 'podium' && <PodiumView participants={participants} onEnd={() => void handleEnd()} strings={strings} />}
 
       {session && session.phase === 'ended' && (
         <div className="flex flex-col items-center gap-4 text-center">
-          <h1 className="text-2xl font-semibold">Session ended</h1>
-          <p className="text-slate-400">Thanks for playing — start a new session to play again.</p>
+          <h1 className="text-2xl font-semibold">{s.title}</h1>
+          <p className="text-slate-400">{s.subtitle}</p>
           <button
             onClick={() => {
               setSession(null)
@@ -197,7 +203,7 @@ export function HostPage() {
             }}
             className="rounded-lg bg-indigo-600 px-6 py-3 font-medium hover:bg-indigo-500"
           >
-            Start a new session
+            {s.startNewSession}
           </button>
         </div>
       )}

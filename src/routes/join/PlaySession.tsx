@@ -5,6 +5,7 @@ import { subscribeToParticipant } from '../../lib/participants'
 import { subscribeToAnswer, submitAnswer } from '../../lib/answers'
 import { getQuiz } from '../../lib/quizzes'
 import { getQuestion } from '../../lib/questions'
+import { STRINGS, type Strings } from '../../lib/strings'
 import { YearPicker } from './YearPicker'
 import type { Answer, Participant, Question, Session } from '../../types'
 
@@ -60,18 +61,21 @@ export function PlaySession({ sessionId, uid }: { sessionId: string; uid: string
     }
   }
 
+  const strings = STRINGS[session?.language ?? 'en']
+  const s = strings.play
+
   if (session === undefined || !participant) {
-    return <p className="text-slate-400">Loading…</p>
+    return <p className="text-slate-400">{s.loading}</p>
   }
   if (session === null) {
-    return <p className="text-slate-400">This session no longer exists.</p>
+    return <p className="text-slate-400">{s.sessionGone}</p>
   }
 
   if (session.phase === 'lobby') {
     return (
       <div className="flex flex-col items-center gap-3 text-center">
-        <p className="text-2xl">You're in, <span className="font-semibold">{participant.nickname}</span> 🎉</p>
-        <p className="text-slate-400">Waiting for the host to start the quiz…</p>
+        <p className="text-2xl">{s.youreIn(participant.nickname)}</p>
+        <p className="text-slate-400">{s.waitingForHost}</p>
       </div>
     )
   }
@@ -81,46 +85,47 @@ export function PlaySession({ sessionId, uid }: { sessionId: string; uid: string
     if (answer) {
       return (
         <div className="flex flex-col items-center gap-3 text-center">
-          <p className="text-2xl">Locked in: <span className="font-semibold">{answer.guessedYear}</span></p>
-          <p className="text-slate-400">Waiting for the other players…</p>
+          <p className="text-2xl">{s.lockedIn(answer.guessedYear)}</p>
+          <p className="text-slate-400">{s.waitingForOthers}</p>
         </div>
       )
     }
     return (
       <div className="flex flex-col items-center gap-4">
         <p className="text-center text-lg text-slate-300">{question.prompt}</p>
-        <YearPicker onPick={(year) => void handlePick(year)} />
-        {submitting && <p className="text-sm text-slate-500">Locking in…</p>}
+        <YearPicker onPick={(year) => void handlePick(year)} strings={strings} />
+        {submitting && <p className="text-sm text-slate-500">{s.lockingIn}</p>}
       </div>
     )
   }
 
   if (session.phase === 'standings' && questions) {
     if (revealQuestionIndex === session.currentQuestionIndex) {
-      return <PersonalReveal answer={answer} question={questions[session.currentQuestionIndex]} />
+      return <PersonalReveal answer={answer} question={questions[session.currentQuestionIndex]} strings={strings} />
     }
-    return <LookAtScreen message="Standings are up on the big screen!" totalScore={participant.totalScore} />
+    return <LookAtScreen message={s.standingsUp} totalScore={participant.totalScore} strings={strings} />
   }
 
   if (session.phase === 'podium') {
-    return <LookAtScreen message="The final results are on the big screen! 🏆" totalScore={participant.totalScore} />
+    return <LookAtScreen message={s.finalResultsUp} totalScore={participant.totalScore} strings={strings} />
   }
 
   if (session.phase === 'ended') {
     return (
       <div className="flex flex-col items-center gap-3 text-center">
-        <p className="text-2xl font-semibold">Thanks for playing, {participant.nickname}!</p>
-        <p className="text-slate-400">Your final score: {participant.totalScore} points</p>
+        <p className="text-2xl font-semibold">{s.thanksForPlaying(participant.nickname)}</p>
+        <p className="text-slate-400">{s.finalScore(participant.totalScore)}</p>
       </div>
     )
   }
 
-  return <p className="text-slate-400">Loading…</p>
+  return <p className="text-slate-400">{s.loading}</p>
 }
 
-function PersonalReveal({ answer, question }: { answer: Answer | null; question: Question }) {
+function PersonalReveal({ answer, question, strings }: { answer: Answer | null; question: Question; strings: Strings }) {
   const answered = answer !== null
   const scored = answer?.pointsEarned !== null && answer?.pointsEarned !== undefined
+  const s = strings.play
 
   return (
     <motion.div
@@ -128,31 +133,32 @@ function PersonalReveal({ answer, question }: { answer: Answer | null; question:
       animate={{ opacity: 1, scale: 1 }}
       className="flex flex-col items-center gap-2 text-center"
     >
-      <p className="text-slate-400">The correct year was</p>
+      <p className="text-slate-400">{s.correctYearWas}</p>
       <p className="text-5xl font-bold">{question.correctYear}</p>
 
-      {!answered && <p className="mt-2 text-lg text-amber-300">You didn't answer in time — 0 points</p>}
+      {!answered && <p className="mt-2 text-lg text-amber-300">{s.noAnswerInTime}</p>}
 
-      {answered && !scored && <p className="mt-2 text-slate-400">Scoring your answer…</p>}
+      {answered && !scored && <p className="mt-2 text-slate-400">{s.scoringYourAnswer}</p>}
 
       {answered && scored && (
         <>
           <p className="mt-2 text-lg">
-            You guessed <span className="font-semibold">{answer.guessedYear}</span>
+            {s.youGuessed(answer.guessedYear)}
           </p>
-          <p className="text-3xl font-bold text-indigo-400">+{answer.pointsEarned} points</p>
+          <p className="text-3xl font-bold text-indigo-400">{s.pointsEarned(answer.pointsEarned!)}</p>
         </>
       )}
     </motion.div>
   )
 }
 
-function LookAtScreen({ message, totalScore }: { message: string; totalScore: number }) {
+function LookAtScreen({ message, totalScore, strings }: { message: string; totalScore: number; strings: Strings }) {
+  const s = strings.play
   return (
     <div className="flex flex-col items-center gap-2 text-center">
       <p className="text-2xl">📺</p>
       <p className="text-lg text-slate-300">{message}</p>
-      <p className="text-slate-400">Your score so far: <span className="font-semibold text-slate-200">{totalScore}</span></p>
+      <p className="text-slate-400">{s.scoreSoFar(totalScore)}</p>
     </div>
   )
 }

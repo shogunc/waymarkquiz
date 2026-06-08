@@ -1,6 +1,6 @@
 import { collection, doc, getDoc, addDoc, getDocs, onSnapshot, updateDoc, query, where, limit } from 'firebase/firestore'
 import { db } from './firebase'
-import type { Session } from '../types'
+import type { Language, Session } from '../types'
 
 const sessionsCol = collection(db, 'sessions')
 
@@ -26,7 +26,7 @@ async function joinCodeExists(joinCode: string): Promise<boolean> {
   return !snap.empty
 }
 
-export async function createSession(quizId: string, hostUid: string): Promise<Session> {
+export async function createSession(quizId: string, hostUid: string, language: Language): Promise<Session> {
   for (let attempt = 0; attempt < MAX_JOIN_CODE_ATTEMPTS; attempt++) {
     const joinCode = randomJoinCode()
     if (await joinCodeExists(joinCode)) continue
@@ -36,6 +36,7 @@ export async function createSession(quizId: string, hostUid: string): Promise<Se
       hostUid,
       quizId,
       phase: 'lobby',
+      language,
       currentQuestionIndex: 0,
       answerWindowEndsAt: null,
       createdAt: Date.now(),

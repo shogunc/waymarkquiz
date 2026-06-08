@@ -1,6 +1,7 @@
 import { QRCodeSVG } from 'qrcode.react'
 import { AnimatePresence, motion } from 'framer-motion'
 import type { Participant, Quiz, Session } from '../../types'
+import type { Strings } from '../../lib/strings'
 
 export function LobbyView({
   session,
@@ -8,20 +9,23 @@ export function LobbyView({
   participants,
   onStart,
   starting,
+  strings,
 }: {
   session: Session
   quiz: Quiz
   participants: Participant[]
   onStart: () => void
   starting: boolean
+  strings: Strings
 }) {
   const joinUrl = `${window.location.origin}/join?code=${session.joinCode}`
+  const s = strings.lobby
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col items-center gap-8 text-center">
       <div>
         <p className="text-slate-400">{quiz.title}</p>
-        <h1 className="text-lg text-slate-400">Join at <span className="font-medium text-slate-200">{joinUrl.replace(/^https?:\/\//, '')}</span></h1>
+        <h1 className="text-lg text-slate-400">{s.joinAt} <span className="font-medium text-slate-200">{joinUrl.replace(/^https?:\/\//, '')}</span></h1>
       </div>
 
       <div className="flex flex-col items-center gap-4">
@@ -33,7 +37,7 @@ export function LobbyView({
 
       <div className="w-full">
         <h2 className="mb-3 text-sm font-medium text-slate-400">
-          {participants.length === 0 ? 'Waiting for players…' : `${participants.length} player${participants.length === 1 ? '' : 's'} joined`}
+          {participants.length === 0 ? s.waitingForPlayers : s.playersJoined(participants.length)}
         </h2>
         <ul className="flex flex-wrap justify-center gap-2">
           <AnimatePresence>
@@ -58,7 +62,7 @@ export function LobbyView({
         disabled={participants.length === 0 || starting}
         className="rounded-xl bg-indigo-600 px-8 py-4 text-lg font-semibold hover:bg-indigo-500 disabled:opacity-40"
       >
-        {starting ? 'Starting…' : 'Start quiz'}
+        {starting ? s.starting : s.startQuiz}
       </button>
     </div>
   )
