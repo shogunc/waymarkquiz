@@ -33,10 +33,19 @@ export function StandingsView({
     return () => clearTimeout(id)
   }, [])
 
+  const pointsMap = new Map(answers.map((a) => [a.participantId, a.pointsEarned ?? 0]))
+  const getPoints = (p: Participant) => pointsMap.get(p.id) ?? 0
+
+  // Precompute rank indices for both before/after so we can show movement arrows.
+  const previousRankOf = new Map(
+    [...participants].sort((a, b) => (b.totalScore - getPoints(b)) - (a.totalScore - getPoints(a))).map((p, i) => [p.id, i])
+  )
+  const finalRankOf = new Map(
+    [...participants].sort((a, b) => b.totalScore - a.totalScore).map((p, i) => [p.id, i])
+  )
+
   function scoreFor(p: Participant): number {
-    if (revealed) return p.totalScore
-    const pointsThisRound = answers.find((a) => a.participantId === p.id)?.pointsEarned ?? 0
-    return p.totalScore - pointsThisRound
+    return revealed ? p.totalScore : p.totalScore - getPoints(p)
   }
 
   const ranked = [...participants].sort((a, b) => scoreFor(b) - scoreFor(a))
@@ -50,18 +59,29 @@ export function StandingsView({
           shift, anyone crossing the cutoff visibly slides in or out from the bottom edge. */}
       <div className="h-[352px] w-full overflow-hidden">
         <ul className="flex w-full flex-col gap-2">
-          {ranked.map((p, index) => (
-            <motion.li
-              key={p.id}
-              layout
-              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className="flex h-16 items-center gap-4 rounded-xl border border-slate-800 bg-slate-900 px-4"
-            >
-              <span className="w-8 text-center text-lg font-bold text-slate-500">{index + 1}</span>
-              <span className="flex-1 text-left font-medium">{p.nickname}</span>
-              <span className="text-xl font-bold tabular-nums">{scoreFor(p)}</span>
-            </motion.li>
-          ))}
+          {ranked.map((p, index) => {
+            const points = getPoints(p)
+            const rankDelta = (previousRankOf.get(p.id) ?? index) - (finalRankOf.get(p.id) ?? index)
+            return (
+              <motion.li
+                key={p.id}
+                layout
+                transition={{ type: 'spring', stiffness: 80, damping: 20 }}
+                className="flex h-16 items-center gap-4 rounded-xl border border-slate-800 bg-slate-900 px-4"
+              >
+                <span className="w-8 text-center text-lg font-bold text-slate-500">{index + 1}</span>
+                <span className="flex-1 text-left font-medium">{p.nickname}</span>
+                {revealed && (
+                  <span className="flex items-center gap-1 text-sm tabular-nums">
+                    {rankDelta > 0 && <span className="font-bold text-emerald-400">▲</span>}
+                    {rankDelta < 0 && <span className="font-bold text-red-400">▼</span>}
+                    {points > 0 && <span className="text-slate-400">+{points}</span>}
+                  </span>
+                )}
+                <span className="text-xl font-bold tabular-nums">{scoreFor(p)}</span>
+              </motion.li>
+            )
+          })}
         </ul>
       </div>
 

@@ -28,6 +28,10 @@ export function HostPage() {
 
   const scoredQuestionIndex = useRef<number | null>(null)
 
+  // ---- TEMP DEBUG refs for the fake crowd below — DO NOT COMMIT ----
+  const fakeScores = useRef<Record<string, number>>({})
+  const fakeAnswersCache = useRef<Record<number, Answer[]>>({})
+
   useEffect(() => {
     void ensureSignedIn().then((user) => setHostUid(user.uid))
   }, [])
@@ -154,8 +158,9 @@ export function HostPage() {
   }
 
   async function handleShowStandings() {
-    if (!session) return
-    await patchSession(session.id, { phase: 'standings' })
+    if (!session || !questions) return
+    const isLast = session.currentQuestionIndex >= questions.length - 1
+    await patchSession(session.id, { phase: isLast ? 'podium' : 'standings', answerWindowEndsAt: null })
   }
 
   async function handleNext() {
@@ -183,6 +188,45 @@ export function HostPage() {
     await patchSession(session.id, { phase: 'ended' })
   }
 
+  // ---- DEBUG: simulated crowd — toggle FAKE_CROWD_ENABLED to test standings/results with many participants ----
+  const FAKE_CROWD_ENABLED = false
+  const FAKE_NAMES = ['Alice','Bob','Charlie','Diana','Erik','Fatima','Gustav','Hannah','Ivan','Julia','Karl','Lena','Marcus','Nina','Oscar','Petra','Ravi','Sara','Thomas','Ulrika']
+  const FAKE_CROWD_SIZE = FAKE_NAMES.length
+  let fakeAnswers: Answer[] = []
+  if (FAKE_CROWD_ENABLED && session && questions) {
+    const qIndex = session.currentQuestionIndex
+    const question = questions[qIndex]
+    if (question) {
+      if (!fakeAnswersCache.current[qIndex]) {
+        fakeAnswersCache.current[qIndex] = Array.from({ length: FAKE_CROWD_SIZE }, (_, i) => ({
+          participantId: `fake-${i}`,
+          questionIndex: qIndex,
+          guessedYear: Math.min(2026, Math.max(1900, question.correctYear + Math.floor(Math.random() * 41) - 20)),
+          submittedAt: Date.now(),
+          pointsEarned: null,
+        }))
+      }
+      fakeAnswers = fakeAnswersCache.current[qIndex]
+      if (session.phase === 'results' || session.phase === 'standings' || session.phase === 'podium') {
+        for (const a of fakeAnswers) {
+          if (a.pointsEarned === null) {
+            a.pointsEarned = scoreGuess(question.correctYear, a.guessedYear)
+            fakeScores.current[a.participantId] = (fakeScores.current[a.participantId] ?? 0) + a.pointsEarned
+          }
+        }
+      }
+    }
+  }
+  const displayParticipants: Participant[] = FAKE_CROWD_ENABLED
+    ? Array.from({ length: FAKE_CROWD_SIZE }, (_, i) => {
+        const id = `fake-${i}`
+        return { id, nickname: FAKE_NAMES[i], joinedAt: 0, totalScore: fakeScores.current[id] ?? 0 }
+      })
+    : participants
+
+  const displayAnswers = FAKE_CROWD_ENABLED ? fakeAnswers : answers
+  // ---- END DEBUG ----
+
   const strings = STRINGS[session?.language ?? 'en']
   const s = strings.sessionEnded
 
@@ -195,7 +239,7 @@ export function HostPage() {
       )}
 
       {session && quiz && session.phase === 'lobby' && (
-        <LobbyView session={session} quiz={quiz} participants={participants} onStart={() => void handleStart()} starting={transitioning} strings={strings} />
+        <LobbyView session={session} quiz={quiz} participants={displayParticipants} onStart={() => void handleStart()} starting={transitioning} strings={strings} />
       )}
 
       {session && questions && (session.phase === 'preview' || session.phase === 'answering') && (
@@ -204,8 +248,8 @@ export function HostPage() {
           question={questions[session.currentQuestionIndex]}
           questionNumber={session.currentQuestionIndex + 1}
           totalQuestions={questions.length}
-          participants={participants}
-          answers={answers}
+          participants={displayParticipants}
+          answers={displayAnswers}
           revealed={session.phase === 'answering'}
           onReveal={() => void handleReveal()}
           revealing={transitioning}
@@ -216,8 +260,8 @@ export function HostPage() {
       {session && questions && session.phase === 'results' && (
         <ResultsView
           question={questions[session.currentQuestionIndex]}
-          participants={participants}
-          answers={answers}
+          participants={displayParticipants}
+          answers={displayAnswers}
           onContinue={() => void handleShowStandings()}
           advancing={transitioning}
           strings={strings}
@@ -226,8 +270,8 @@ export function HostPage() {
 
       {session && questions && session.phase === 'standings' && (
         <StandingsView
-          participants={participants}
-          answers={answers}
+          participants={displayParticipants}
+          answers={displayAnswers}
           isLastQuestion={session.currentQuestionIndex >= questions.length - 1}
           onNext={() => void handleNext()}
           advancing={transitioning}
@@ -235,7 +279,7 @@ export function HostPage() {
         />
       )}
 
-      {session && session.phase === 'podium' && <PodiumView participants={participants} onEnd={() => void handleEnd()} strings={strings} />}
+      {session && session.phase === 'podium' && <PodiumView participants={displayParticipants} onEnd={() => void handleEnd()} strings={strings} />}
 
       {session && session.phase === 'ended' && (
         <div className="flex flex-col items-center gap-4 text-center">
