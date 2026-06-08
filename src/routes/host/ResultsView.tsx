@@ -1,7 +1,7 @@
 import type { Answer, Participant, Question } from '../../types'
 import type { Strings } from '../../lib/strings'
 
-const MAX_CLOSEST_GUESSES = 3
+const MAX_CLOSEST_GUESSES = 5
 
 export function ResultsView({
   question,
