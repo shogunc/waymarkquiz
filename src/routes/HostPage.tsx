@@ -99,12 +99,12 @@ export function HostPage() {
     }
   }
 
-  async function handlePickQuiz(picked: Quiz, language: Language) {
+  async function handlePickQuiz(picked: Quiz, language: Language, answerDurationSeconds: number) {
     if (!hostUid) return
     setCreating(true)
     setError(null)
     try {
-      const created = await createSession(picked.id, hostUid, language)
+      const created = await createSession(picked.id, hostUid, language, answerDurationSeconds)
       setQuiz(picked)
       setSession(created)
     } catch (e) {
@@ -121,7 +121,7 @@ export function HostPage() {
       await patchSession(session.id, {
         phase: 'answering',
         currentQuestionIndex: 0,
-        answerWindowEndsAt: Date.now() + quiz.answerDurationSeconds * 1000,
+        answerWindowEndsAt: Date.now() + session.answerDurationSeconds * 1000,
       })
     } finally {
       setTransitioning(false)
@@ -138,7 +138,7 @@ export function HostPage() {
         await patchSession(session.id, {
           phase: 'answering',
           currentQuestionIndex: nextIndex,
-          answerWindowEndsAt: Date.now() + quiz.answerDurationSeconds * 1000,
+          answerWindowEndsAt: Date.now() + session.answerDurationSeconds * 1000,
         })
       } else {
         await patchSession(session.id, { phase: 'podium', answerWindowEndsAt: null })
@@ -160,7 +160,9 @@ export function HostPage() {
     <main className="flex min-h-svh flex-col items-center justify-center gap-6 bg-slate-950 p-6 text-slate-100">
       {error && <p className="rounded-lg border border-red-900 bg-red-950 p-3 text-sm text-red-300">{error}</p>}
 
-      {!session && hostUid && <QuizPicker onPick={(q, language) => void handlePickQuiz(q, language)} busy={creating} />}
+      {!session && hostUid && (
+        <QuizPicker onPick={(q, language, answerDurationSeconds) => void handlePickQuiz(q, language, answerDurationSeconds)} busy={creating} />
+      )}
 
       {session && quiz && session.phase === 'lobby' && (
         <LobbyView session={session} quiz={quiz} participants={participants} onStart={() => void handleStart()} starting={transitioning} strings={strings} />

@@ -17,8 +17,6 @@ export interface Quiz {
   title: string
   description?: string
   questionIds: string[]
-  /** How long participants get to answer each question in this quiz. */
-  answerDurationSeconds: number
   createdAt: number
   updatedAt: number
 }
@@ -47,6 +45,8 @@ export interface Session {
   phase: SessionPhase
   /** Chosen by the host when starting the session; drives which strings every client renders. */
   language: Language
+  /** Chosen by the host when starting the session; fixed answer-window length for every question. */
+  answerDurationSeconds: number
   currentQuestionIndex: number
   /** Epoch ms; clients render their own countdown from this. */
   answerWindowEndsAt: number | null

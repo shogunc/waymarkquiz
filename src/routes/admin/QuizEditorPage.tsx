@@ -11,7 +11,6 @@ export function QuizEditorPage() {
 
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [answerDurationSeconds, setAnswerDurationSeconds] = useState(20)
   const [questionIds, setQuestionIds] = useState<string[]>([])
   const [library, setLibrary] = useState<Question[] | null>(null)
   const [loading, setLoading] = useState(true)
@@ -28,7 +27,6 @@ export function QuizEditorPage() {
         } else {
           setTitle(quiz.title)
           setDescription(quiz.description ?? '')
-          setAnswerDurationSeconds(quiz.answerDurationSeconds)
           setQuestionIds(quiz.questionIds)
         }
       }
@@ -60,13 +58,10 @@ export function QuizEditorPage() {
     setError(null)
     if (!title.trim()) return setError('Add a title.')
     if (questionIds.length === 0) return setError('Add at least one question.')
-    if (!Number.isFinite(answerDurationSeconds) || answerDurationSeconds <= 0) {
-      return setError('Answer duration must be a positive number of seconds.')
-    }
 
     setSaving(true)
     try {
-      const input = { title: title.trim(), description: description.trim() || undefined, questionIds, answerDurationSeconds }
+      const input = { title: title.trim(), description: description.trim() || undefined, questionIds }
       if (isNew) {
         await createQuiz(input)
       } else {
@@ -100,16 +95,6 @@ export function QuizEditorPage() {
           <input
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 outline-none focus:border-indigo-500"
-          />
-        </label>
-        <label className="flex max-w-xs flex-col gap-1 text-sm">
-          Answer time per question (seconds)
-          <input
-            type="number"
-            min={1}
-            value={answerDurationSeconds}
-            onChange={(e) => setAnswerDurationSeconds(e.target.valueAsNumber)}
             className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 outline-none focus:border-indigo-500"
           />
         </label>

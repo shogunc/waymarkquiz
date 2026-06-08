@@ -107,7 +107,9 @@ Synced session phases (written to the session document, driven by the host):
   "preview" period, so "question" and "answering" collapse into one synced phase.
   Participants submit a guess via the drill-down picker (see below); answers lock
   in immediately on final selection — no edit/resubmit. Window length is fixed
-  per quiz (`answerDurationSeconds` on the quiz, not per question).
+  per session (`answerDurationSeconds`, chosen by the host when starting the
+  session — see Joining/starting a session below — and applied to every
+  question in that run).
 - **Standings**: host screen shows a **top-N leaderboard** with animated rank
   changes (Framer Motion). Tied scores share the same rank — no tiebreaker.
 - **Podium**: a celebratory animated reveal (e.g. countdown 3rd → 1st) rather
@@ -180,8 +182,7 @@ assume a "typical" size; support anything from a handful of questions to dozens.
 
 **`quizzes/{quizId}`** — an ordered playlist of question IDs from the library
 ```
-{ title, description?, questionIds: [qId, qId, ...], answerDurationSeconds, createdAt, updatedAt }
-// answerDurationSeconds: fixed answer-window length for every question in this quiz
+{ title, description?, questionIds: [qId, qId, ...], createdAt, updatedAt }
 ```
 Order is simply array order — reordering in the admin UI just rewrites this
 array. To run a session, resolve `questionIds[currentQuestionIndex]` against
@@ -195,6 +196,8 @@ the library (the full ID list is known up front, so questions can be prefetched)
   quizId,
   phase,                // 'lobby' | 'answering' | 'standings' | 'podium' | 'ended'
                         // (see Game flow above — "personal reveal" is participant-local, not synced)
+  language,             // chosen by the host at session creation; drives which strings every client renders
+  answerDurationSeconds,// chosen by the host at session creation; fixed answer-window length for every question
   currentQuestionIndex,
   answerWindowEndsAt,   // timestamp; clients render their own countdown from this
   createdAt

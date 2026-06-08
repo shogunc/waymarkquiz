@@ -8,7 +8,6 @@ export type QuizInput = {
   title: string
   description?: string
   questionIds: string[]
-  answerDurationSeconds: number
 }
 
 export async function listQuizzes(): Promise<Quiz[]> {
