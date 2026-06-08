@@ -124,8 +124,16 @@ Synced session phases (written to the session document, driven by the host):
   question specifically). This is also the moment every participant gets their
   personal reveal (see below). The host then taps **continue** to move to the
   running standings.
-- **Standings**: host screen shows a **top-N leaderboard** with animated rank
-  changes (Framer Motion). Tied scores share the same rank — no tiebreaker.
+- **Standings**: host screen shows a leaderboard, clipped to a fixed-height
+  window of the **top 5** (every participant is still rendered and laid out
+  behind the scenes, so anyone crossing that cutoff visibly slides in or out
+  from the bottom edge rather than popping into existence). To make the rank
+  *changes* visible rather than arriving pre-shuffled, the screen first renders
+  with this round's points rolled back — i.e. the standings as they stood when
+  the previous standings screen was last seen, or everyone on zero for the
+  first question — then, after a short beat, reveals the updated totals, and
+  Framer Motion's layout animation animates each row's reshuffle with a spring.
+  Tied scores share the same rank — no tiebreaker.
 - **Podium**: a celebratory animated reveal (e.g. countdown 3rd → 1st) rather
   than reusing the plain standings view.
 

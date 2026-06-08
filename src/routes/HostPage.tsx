@@ -47,9 +47,11 @@ export function HostPage() {
     return subscribeToParticipants(session.id, setParticipants)
   }, [session?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Track answers for whichever question is currently live or just closed (results screen still shows them).
+  // Track answers for whichever question is currently live or just closed — results and
+  // standings both still need this question's per-participant points (results to show the
+  // closest guesses, standings to roll scores back to their pre-round values for the reveal).
   useEffect(() => {
-    if (!session || (session.phase !== 'answering' && session.phase !== 'results')) {
+    if (!session || (session.phase !== 'answering' && session.phase !== 'results' && session.phase !== 'standings')) {
       setAnswers([])
       return
     }
@@ -225,6 +227,7 @@ export function HostPage() {
       {session && questions && session.phase === 'standings' && (
         <StandingsView
           participants={participants}
+          answers={answers}
           isLastQuestion={session.currentQuestionIndex >= questions.length - 1}
           onNext={() => void handleNext()}
           advancing={transitioning}
