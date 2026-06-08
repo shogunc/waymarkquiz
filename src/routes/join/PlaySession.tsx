@@ -6,14 +6,13 @@ import { subscribeToAnswer, submitAnswer } from '../../lib/answers'
 import { getQuiz } from '../../lib/quizzes'
 import { getQuestion } from '../../lib/questions'
 import { YearPicker } from './YearPicker'
-import type { Answer, Participant, Question, Quiz, Session } from '../../types'
+import type { Answer, Participant, Question, Session } from '../../types'
 
 const REVEAL_DURATION_MS = 3500
 
 export function PlaySession({ sessionId, uid }: { sessionId: string; uid: string }) {
   const [session, setSession] = useState<Session | null | undefined>(undefined)
   const [participant, setParticipant] = useState<Participant | null>(null)
-  const [quiz, setQuiz] = useState<Quiz | null>(null)
   const [questions, setQuestions] = useState<Question[] | null>(null)
   const [answer, setAnswer] = useState<Answer | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -27,7 +26,6 @@ export function PlaySession({ sessionId, uid }: { sessionId: string; uid: string
   useEffect(() => {
     if (!session) return
     void getQuiz(session.quizId).then(async (q) => {
-      setQuiz(q)
       if (q) setQuestions(await Promise.all(q.questionIds.map((id) => getQuestion(id))).then((qs) => qs.filter((x): x is Question => x !== null)))
     })
   }, [session?.quizId]) // eslint-disable-line react-hooks/exhaustive-deps
