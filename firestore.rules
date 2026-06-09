@@ -81,11 +81,13 @@ service cloud.firestore {
           && request.resource.data.pointsEarned == null;
 
         // Only the host may fill in pointsEarned (authoritative scoring);
-        // the participant's own guess is immutable once submitted (answers
-        // lock in immediately — see "Answering a question" in CLAUDE.md).
+        // all other fields are immutable once submitted — the only legal
+        // change is pointsEarned going from null to a number.
         allow update: if isHostOf(get(/databases/$(database)/documents/sessions/$(sessionId)))
           && request.resource.data.participantId == resource.data.participantId
-          && request.resource.data.guessedYear == resource.data.guessedYear;
+          && request.resource.data.guessedYear == resource.data.guessedYear
+          && request.resource.data.questionIndex == resource.data.questionIndex
+          && request.resource.data.submittedAt == resource.data.submittedAt;
 
         allow delete: if false;
       }
