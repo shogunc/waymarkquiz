@@ -19,7 +19,7 @@ export function PlaySession({ sessionId, uid }: { sessionId: string; uid: string
   const [submitting, setSubmitting] = useState(false)
   const [revealQuestionIndex, setRevealQuestionIndex] = useState<number | null>(null)
 
-  const seenStandingsFor = useRef<number | null>(null)
+  const seenRevealFor = useRef<number | null>(null)
 
   useEffect(() => subscribeToSession(sessionId, setSession), [sessionId])
   useEffect(() => subscribeToParticipant(sessionId, uid, setParticipant), [sessionId, uid])
@@ -44,8 +44,8 @@ export function PlaySession({ sessionId, uid }: { sessionId: string; uid: string
   // screen for a question we just played — independent of the synced session phase (see CLAUDE.md).
   useEffect(() => {
     if (!session || session.phase !== 'results') return
-    if (seenStandingsFor.current === session.currentQuestionIndex) return
-    seenStandingsFor.current = session.currentQuestionIndex
+    if (seenRevealFor.current === session.currentQuestionIndex) return
+    seenRevealFor.current = session.currentQuestionIndex
     setRevealQuestionIndex(session.currentQuestionIndex)
     const id = setTimeout(() => setRevealQuestionIndex(null), REVEAL_DURATION_MS)
     return () => clearTimeout(id)
@@ -115,7 +115,7 @@ export function PlaySession({ sessionId, uid }: { sessionId: string; uid: string
   }
 
   if (session.phase === 'podium') {
-    return <LookAtScreen message={s.finalResultsUp} totalScore={participant.totalScore} strings={strings} />
+    return <LookAtScreen message={s.finalResultsUp} totalScore={participant.totalScore} final strings={strings} />
   }
 
   if (session.phase === 'ended') {
@@ -160,13 +160,13 @@ function PersonalReveal({ answer, question, strings }: { answer: Answer | null; 
   )
 }
 
-function LookAtScreen({ message, totalScore, strings }: { message: string; totalScore: number; strings: Strings }) {
+function LookAtScreen({ message, totalScore, final: isFinal = false, strings }: { message: string; totalScore: number; final?: boolean; strings: Strings }) {
   const s = strings.play
   return (
     <div className="flex flex-col items-center gap-2 text-center">
       <p className="text-2xl">📺</p>
       <p className="text-lg text-slate-300">{message}</p>
-      <p className="text-slate-400">{s.scoreSoFar(totalScore)}</p>
+      <p className="text-slate-400">{isFinal ? s.finalScore(totalScore) : s.scoreSoFar(totalScore)}</p>
     </div>
   )
 }

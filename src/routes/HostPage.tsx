@@ -28,7 +28,6 @@ export function HostPage() {
 
   const scoredQuestionIndex = useRef<number | null>(null)
 
-  // ---- TEMP DEBUG refs for the fake crowd below — DO NOT COMMIT ----
   const fakeScores = useRef<Record<string, number>>({})
   const fakeAnswersCache = useRef<Record<number, Answer[]>>({})
 

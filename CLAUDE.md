@@ -283,5 +283,10 @@ tooling, test commands, folder layout, etc.)*
 
 ## Status
 
-Early planning stage — no code yet. This file describes the intended direction;
-update it as real decisions are made or the design changes.
+In active development. Core game loop is fully implemented and playable:
+full 7-phase state machine (lobby → preview → answering → results → standings →
+podium → ended), host and participant views, scoring, animated standings with
+rank-change indicators, QR code joining, per-session language (EN/SV) and
+answer-duration settings, and an admin UI for authoring questions and quizzes.
+
+Still to do: Firestore security rules, podium celebratory animation.
