@@ -1,8 +1,22 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { listQuestions } from '../../lib/questions'
+import { LanguageBadges } from '../../components/LanguageBadge'
+import { listQuestions, questionLanguages } from '../../lib/questions'
 import { createQuiz, getQuiz, updateQuiz } from '../../lib/quizzes'
-import type { Question } from '../../types'
+import type { Language, Question } from '../../types'
+
+const ALL_LANGS: Language[] = ['en', 'sv']
+
+function QuestionFlags({ q }: { q: Question }) {
+  const langs = questionLanguages(q)
+  return <LanguageBadges langs={langs} />
+}
+
+function firstPrompt(q: Question): string {
+  const langs = questionLanguages(q)
+  const lang = langs[0]
+  return (lang ? q.prompt[lang] : Object.values(q.prompt)[0]) ?? 'Unknown question'
+}
 
 export function QuizEditorPage() {
   const { id } = useParams()
@@ -37,6 +51,17 @@ export function QuizEditorPage() {
   const byId = useMemo(() => new Map((library ?? []).map((q) => [q.id, q])), [library])
   const available = useMemo(() => (library ?? []).filter((q) => !questionIds.includes(q.id)), [library, questionIds])
 
+  // Languages supported by every question currently in the quiz.
+  const quizLanguages = useMemo(() => {
+    if (questionIds.length === 0) return [] as Language[]
+    return ALL_LANGS.filter((lang) =>
+      questionIds.every((qid) => {
+        const q = byId.get(qid)
+        return q ? questionLanguages(q).includes(lang) : false
+      })
+    )
+  }, [questionIds, byId])
+
   function add(questionId: string) {
     setQuestionIds((ids) => [...ids, questionId])
   }
@@ -58,10 +83,11 @@ export function QuizEditorPage() {
     setError(null)
     if (!title.trim()) return setError('Add a title.')
     if (questionIds.length === 0) return setError('Add at least one question.')
+    if (quizLanguages.length === 0) return setError('All questions must share at least one language. Check the flags and ensure every question has trivia and a prompt in a common language.')
 
     setSaving(true)
     try {
-      const input = { title: title.trim(), description: description.trim() || undefined, questionIds }
+      const input = { title: title.trim(), description: description.trim() || undefined, questionIds, supportedLanguages: quizLanguages }
       if (isNew) {
         await createQuiz(input)
       } else {
@@ -98,6 +124,14 @@ export function QuizEditorPage() {
             className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 outline-none focus:border-indigo-500"
           />
         </label>
+        {questionIds.length > 0 && (
+          <p className="text-sm text-slate-400">
+            Supported languages:{' '}
+            {quizLanguages.length > 0
+              ? <LanguageBadges langs={quizLanguages} />
+              : <span className="text-amber-400">None — questions don't share a common language</span>}
+          </p>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -115,16 +149,11 @@ export function QuizEditorPage() {
                   ) : (
                     <div className="h-10 w-14 rounded bg-slate-800" />
                   )}
-                  <span className="flex-1 truncate text-sm">{q?.prompt ?? 'Unknown question'}</span>
-                  <button type="button" onClick={() => move(index, -1)} disabled={index === 0} className="rounded border border-slate-700 px-2 py-1 text-xs hover:bg-slate-800 disabled:opacity-30">
-                    ↑
-                  </button>
-                  <button type="button" onClick={() => move(index, 1)} disabled={index === questionIds.length - 1} className="rounded border border-slate-700 px-2 py-1 text-xs hover:bg-slate-800 disabled:opacity-30">
-                    ↓
-                  </button>
-                  <button type="button" onClick={() => remove(index)} className="rounded border border-red-900 px-2 py-1 text-xs text-red-300 hover:bg-red-950">
-                    Remove
-                  </button>
+                  <span className="flex-1 truncate text-sm">{q ? firstPrompt(q) : 'Unknown question'}</span>
+                  {q && <QuestionFlags q={q} />}
+                  <button type="button" onClick={() => move(index, -1)} disabled={index === 0} className="rounded border border-slate-700 px-2 py-1 text-xs hover:bg-slate-800 disabled:opacity-30">↑</button>
+                  <button type="button" onClick={() => move(index, 1)} disabled={index === questionIds.length - 1} className="rounded border border-slate-700 px-2 py-1 text-xs hover:bg-slate-800 disabled:opacity-30">↓</button>
+                  <button type="button" onClick={() => remove(index)} className="rounded border border-red-900 px-2 py-1 text-xs text-red-300 hover:bg-red-950">Remove</button>
                 </li>
               )
             })}
@@ -138,10 +167,9 @@ export function QuizEditorPage() {
             {available.map((q) => (
               <li key={q.id} className="flex items-center gap-3 rounded-lg border border-slate-800 p-2">
                 <img src={q.imageData} alt="" className="h-10 w-14 rounded object-cover" />
-                <span className="flex-1 truncate text-sm">{q.prompt}</span>
-                <button type="button" onClick={() => add(q.id)} className="rounded border border-slate-700 px-3 py-1 text-xs hover:bg-slate-800">
-                  Add
-                </button>
+                <span className="flex-1 truncate text-sm">{firstPrompt(q)}</span>
+                <QuestionFlags q={q} />
+                <button type="button" onClick={() => add(q.id)} className="rounded border border-slate-700 px-3 py-1 text-xs hover:bg-slate-800">Add</button>
               </li>
             ))}
           </ul>
@@ -151,11 +179,7 @@ export function QuizEditorPage() {
       {error && <p className="rounded-lg border border-red-900 bg-red-950 p-3 text-sm text-red-300">{error}</p>}
 
       <div className="flex gap-3">
-        <button
-          type="submit"
-          disabled={saving}
-          className="rounded-lg bg-indigo-600 px-4 py-2 font-medium hover:bg-indigo-500 disabled:opacity-50"
-        >
+        <button type="submit" disabled={saving} className="rounded-lg bg-indigo-600 px-4 py-2 font-medium hover:bg-indigo-500 disabled:opacity-50">
           {saving ? 'Saving…' : 'Save'}
         </button>
         <button type="button" onClick={() => navigate('..')} className="rounded-lg border border-slate-700 px-4 py-2 font-medium hover:bg-slate-800">

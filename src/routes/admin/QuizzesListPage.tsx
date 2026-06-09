@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { LanguageBadges } from '../../components/LanguageBadge'
 import { listQuizzes, deleteQuiz } from '../../lib/quizzes'
 import type { Quiz } from '../../types'
 
@@ -42,7 +43,10 @@ export function QuizzesListPage() {
         {quizzes?.map((quiz) => (
           <li key={quiz.id} className="flex items-center gap-4 rounded-xl border border-slate-800 p-3">
             <div className="flex-1">
-              <p className="font-medium">{quiz.title}</p>
+              <div className="flex items-center gap-2">
+                <p className="font-medium">{quiz.title}</p>
+                <LanguageBadges langs={quiz.supportedLanguages} />
+              </div>
               <p className="text-sm text-slate-400">
                 {quiz.questionIds.length} question{quiz.questionIds.length === 1 ? '' : 's'}
                 {quiz.description ? ` · ${quiz.description}` : ''}

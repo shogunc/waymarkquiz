@@ -11,26 +11,49 @@ import {
   where,
 } from 'firebase/firestore'
 import { db } from './firebase'
-import type { Question, Quiz } from '../types'
+import type { Language, Question, Quiz } from '../types'
 
 const questionsCol = collection(db, 'questions')
 const quizzesCol = collection(db, 'quizzes')
 
 export type QuestionInput = {
   imageData: string
-  trivia: string
-  prompt: string
+  trivia: Partial<Record<Language, string>>
+  prompt: Partial<Record<Language, string>>
   correctYear: number
+}
+
+/** Languages for which this question has both a trivia text and a prompt. */
+export function questionLanguages(q: Question): Language[] {
+  return (['en', 'sv'] as Language[]).filter(
+    (lang) => q.trivia[lang]?.trim() && q.prompt[lang]?.trim()
+  )
+}
+
+// Existing documents stored trivia/prompt as plain strings (Swedish).
+// Normalise them to the new object format on read.
+function normalizeQuestion(id: string, data: Record<string, unknown>): Question {
+  const rawTrivia = data.trivia
+  const rawPrompt = data.prompt
+  return {
+    id,
+    imageData: data.imageData as string,
+    trivia: typeof rawTrivia === 'string' ? { sv: rawTrivia } : ((rawTrivia ?? {}) as Partial<Record<Language, string>>),
+    prompt: typeof rawPrompt === 'string' ? { sv: rawPrompt } : ((rawPrompt ?? {}) as Partial<Record<Language, string>>),
+    correctYear: data.correctYear as number,
+    createdAt: data.createdAt as number,
+    updatedAt: data.updatedAt as number,
+  }
 }
 
 export async function listQuestions(): Promise<Question[]> {
   const snap = await getDocs(query(questionsCol, orderBy('createdAt', 'desc')))
-  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Question, 'id'>) }))
+  return snap.docs.map((d) => normalizeQuestion(d.id, d.data()))
 }
 
 export async function getQuestion(id: string): Promise<Question | null> {
   const snap = await getDoc(doc(questionsCol, id))
-  return snap.exists() ? { id: snap.id, ...(snap.data() as Omit<Question, 'id'>) } : null
+  return snap.exists() ? normalizeQuestion(snap.id, snap.data()) : null
 }
 
 export async function createQuestion(input: QuestionInput): Promise<string> {

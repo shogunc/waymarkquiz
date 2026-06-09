@@ -96,7 +96,7 @@ export function PlaySession({ sessionId, uid }: { sessionId: string; uid: string
     }
     return (
       <div className="flex flex-col items-center gap-4">
-        <p className="text-center text-lg text-slate-300">{question.prompt}</p>
+        <p className="text-center text-lg text-slate-300">{question.prompt[session.language]}</p>
         <YearPicker onPick={(year) => void handlePick(year)} strings={strings} />
         {submitting && <p className="text-sm text-slate-500">{s.lockingIn}</p>}
       </div>

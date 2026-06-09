@@ -5,8 +5,10 @@ export interface Question {
   id: string
   /** Base64 data-URI string; resized/compressed client-side before storage. */
   imageData: string
-  trivia: string
-  prompt: string
+  /** Trivia text keyed by language — a question must have at least one language with both trivia and prompt. */
+  trivia: Partial<Record<Language, string>>
+  /** Question prompt keyed by language. */
+  prompt: Partial<Record<Language, string>>
   correctYear: number
   createdAt: number
   updatedAt: number
@@ -17,6 +19,8 @@ export interface Quiz {
   title: string
   description?: string
   questionIds: string[]
+  /** Languages for which every question in this quiz has a complete trivia+prompt pair. */
+  supportedLanguages: Language[]
   createdAt: number
   updatedAt: number
 }

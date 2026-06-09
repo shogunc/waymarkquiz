@@ -1,6 +1,6 @@
 import { collection, doc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, query, orderBy } from 'firebase/firestore'
 import { db } from './firebase'
-import type { Quiz } from '../types'
+import type { Language, Quiz } from '../types'
 
 const quizzesCol = collection(db, 'quizzes')
 
@@ -8,16 +8,31 @@ export type QuizInput = {
   title: string
   description?: string
   questionIds: string[]
+  supportedLanguages: Language[]
+}
+
+// Existing quiz documents lack supportedLanguages — default to ['sv'] since all
+// pre-migration content is Swedish.
+function normalizeQuiz(id: string, data: Record<string, unknown>): Quiz {
+  return {
+    id,
+    title: data.title as string,
+    description: data.description as string | undefined,
+    questionIds: data.questionIds as string[],
+    supportedLanguages: (data.supportedLanguages as Language[] | undefined) ?? ['sv'],
+    createdAt: data.createdAt as number,
+    updatedAt: data.updatedAt as number,
+  }
 }
 
 export async function listQuizzes(): Promise<Quiz[]> {
   const snap = await getDocs(query(quizzesCol, orderBy('createdAt', 'desc')))
-  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Quiz, 'id'>) }))
+  return snap.docs.map((d) => normalizeQuiz(d.id, d.data()))
 }
 
 export async function getQuiz(id: string): Promise<Quiz | null> {
   const snap = await getDoc(doc(quizzesCol, id))
-  return snap.exists() ? { id: snap.id, ...(snap.data() as Omit<Quiz, 'id'>) } : null
+  return snap.exists() ? normalizeQuiz(snap.id, snap.data()) : null
 }
 
 // Firestore rejects `undefined` field values — drop `description` entirely when absent

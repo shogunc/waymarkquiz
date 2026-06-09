@@ -32,12 +32,10 @@ export function ResultsView({
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col items-center gap-6 text-center">
-      <h1 className="text-xl font-semibold">{s.title}</h1>
-
       <img src={question.imageData} alt="" className="max-h-[30vh] rounded-2xl object-contain shadow-2xl" />
 
       <div className="flex flex-col items-center gap-1">
-        <p className="text-slate-400">{s.correctYearWas}</p>
+        <p className="text-lg font-medium text-slate-300">{s.correctYearWas}</p>
         <p className="text-5xl font-bold tabular-nums">{question.correctYear}</p>
       </div>
 

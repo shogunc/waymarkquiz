@@ -50,10 +50,10 @@ export function QuestionView({
 
       <img src={question.imageData} alt="" className="max-h-[40vh] rounded-2xl object-contain shadow-2xl" />
 
-      <p className="max-w-2xl text-lg text-slate-300">{question.trivia}</p>
+      <p className="max-w-2xl text-lg text-slate-300">{question.trivia[session.language]}</p>
 
       <p className={`text-2xl font-semibold transition-opacity duration-500 ${revealed ? 'opacity-100' : 'opacity-0'}`}>
-        {question.prompt}
+        {question.prompt[session.language]}
       </p>
 
       {revealed ? (
