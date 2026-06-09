@@ -36,6 +36,7 @@ export function QuestionView({
 
   useEffect(() => {
     if (!revealed) return
+    setNow(Date.now())
     const id = setInterval(() => setNow(Date.now()), 200)
     return () => clearInterval(id)
   }, [revealed])

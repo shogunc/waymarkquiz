@@ -7,6 +7,7 @@ export function ResultsView({
   question,
   participants,
   answers,
+  isLastQuestion,
   onContinue,
   advancing,
   strings,
@@ -14,6 +15,7 @@ export function ResultsView({
   question: Question
   participants: Participant[]
   answers: Answer[]
+  isLastQuestion: boolean
   onContinue: () => void
   advancing: boolean
   strings: Strings
@@ -64,7 +66,7 @@ export function ResultsView({
         disabled={advancing}
         className="rounded-xl bg-indigo-600 px-8 py-4 text-lg font-semibold hover:bg-indigo-500 disabled:opacity-40"
       >
-        {s.continue}
+        {isLastQuestion ? s.continueFinal : s.continue}
       </button>
     </div>
   )

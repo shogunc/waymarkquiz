@@ -34,6 +34,7 @@ export interface Strings {
     closestGuesses: string
     pts: string
     continue: string
+    continueFinal: string
   }
   standings: {
     title: string
@@ -43,9 +44,10 @@ export interface Strings {
   }
   podium: {
     title: string
-    /** 0-indexed place (0 = 1st, 1 = 2nd, 2 = 3rd). */
+    /** 0-indexed place (0 = 1st, 1 = 2nd, …). */
     placeLabel: (place: number) => string
     pts: string
+    honorableMentions: string
     endSession: string
   }
   sessionEnded: {
@@ -106,6 +108,7 @@ const en: Strings = {
     closestGuesses: 'Closest guesses',
     pts: 'pts',
     continue: 'Continue to standings',
+    continueFinal: 'Continue to final results',
   },
   standings: {
     title: 'Standings',
@@ -115,8 +118,9 @@ const en: Strings = {
   },
   podium: {
     title: '🏆 Final results',
-    placeLabel: (place) => ['1st', '2nd', '3rd'][place],
+    placeLabel: (place) => ['1st', '2nd', '3rd', '4th', '5th'][place],
     pts: 'pts',
+    honorableMentions: 'Just missed the podium',
     endSession: 'End session',
   },
   sessionEnded: {
@@ -177,6 +181,7 @@ const sv: Strings = {
     closestGuesses: 'Närmast gissat',
     pts: 'p',
     continue: 'Fortsätt till ställningen',
+    continueFinal: 'Fortsätt till slutresultat',
   },
   standings: {
     title: 'Ställning',
@@ -186,8 +191,9 @@ const sv: Strings = {
   },
   podium: {
     title: '🏆 Slutresultat',
-    placeLabel: (place) => ['1:a', '2:a', '3:a'][place],
+    placeLabel: (place) => ['1:a', '2:a', '3:a', '4:a', '5:a'][place],
     pts: 'p',
+    honorableMentions: 'Nästan på pallen',
     endSession: 'Avsluta',
   },
   sessionEnded: {

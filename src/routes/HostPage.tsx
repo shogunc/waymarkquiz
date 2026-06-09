@@ -188,7 +188,7 @@ export function HostPage() {
   }
 
   // ---- DEBUG: simulated crowd — toggle FAKE_CROWD_ENABLED to test standings/results with many participants ----
-  const FAKE_CROWD_ENABLED = false
+  const FAKE_CROWD_ENABLED = true
   const FAKE_NAMES = ['Alice','Bob','Charlie','Diana','Erik','Fatima','Gustav','Hannah','Ivan','Julia','Karl','Lena','Marcus','Nina','Oscar','Petra','Ravi','Sara','Thomas','Ulrika']
   const FAKE_CROWD_SIZE = FAKE_NAMES.length
   let fakeAnswers: Answer[] = []
@@ -261,6 +261,7 @@ export function HostPage() {
           question={questions[session.currentQuestionIndex]}
           participants={displayParticipants}
           answers={displayAnswers}
+          isLastQuestion={session.currentQuestionIndex >= questions.length - 1}
           onContinue={() => void handleShowStandings()}
           advancing={transitioning}
           strings={strings}
