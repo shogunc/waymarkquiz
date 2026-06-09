@@ -4,26 +4,51 @@ import confetti from 'canvas-confetti'
 import type { Participant } from '../../types'
 import type { Strings } from '../../lib/strings'
 
-const PLACE_HEIGHTS = ['h-56', 'h-40', 'h-28'] // 1st, 2nd, 3rd
+const PLACE_HEIGHTS = ['h-56', 'h-40', 'h-28'] // rank 0 (1st), 1 (2nd), 2 (3rd)
 const PODIUM_COLORS = ['bg-yellow-500', 'bg-slate-400', 'bg-amber-700'] // gold, silver, bronze
-const REVEAL_ORDER = [2, 1, 0] // 3rd → 2nd → 1st
 const REVEAL_INTERVAL_MS = 1600
+
+type RankGroup = { rank: number; members: Participant[] }
+
+// Groups participants by competition rank: tied participants share the same rank,
+// and the next rank skips by the size of the tied group (standard competition ranking).
+function groupByRank(sorted: Participant[]): RankGroup[] {
+  const groups: RankGroup[] = []
+  let i = 0
+  while (i < sorted.length) {
+    const score = sorted[i].totalScore
+    const members: Participant[] = []
+    while (i < sorted.length && sorted[i].totalScore === score) members.push(sorted[i++])
+    groups.push({ rank: i - members.length, members })
+  }
+  return groups
+}
 
 export function PodiumView({ participants, onEnd, strings }: { participants: Participant[]; onEnd: () => void; strings: Strings }) {
   const sorted = [...participants].sort((a, b) => b.totalScore - a.totalScore)
-  const top3 = sorted.slice(0, 3)
-  const runnersUp = sorted.slice(3, 5)
+  const allGroups = groupByRank(sorted)
+
+  // Only groups with rank 0, 1, or 2 appear on the podium — there may be fewer than
+  // three if ties cause a rank to be skipped (e.g. two tied 1st means no 2nd place).
+  const podiumGroups = allGroups.filter((g) => g.rank <= 2)
+  // Reveal highest rank number first: 3rd → 2nd → 1st.
+  const revealOrder = [...podiumGroups].sort((a, b) => b.rank - a.rank)
+  // Runners-up: always show the first post-podium rank group; only add the second
+  // group if the first has exactly one member (a tied first group already fills the slot).
+  const postPodium = allGroups.filter((g) => g.rank > 2)
+  const runnersUpGroups = postPodium[0]?.members.length === 1 ? postPodium.slice(0, 2) : postPodium.slice(0, 1)
+
   const [revealed, setRevealed] = useState(0)
   const s = strings.podium
 
   useEffect(() => {
-    if (revealed >= top3.length) return
+    if (revealed >= podiumGroups.length) return
     const id = setTimeout(() => setRevealed((n) => n + 1), REVEAL_INTERVAL_MS)
     return () => clearTimeout(id)
-  }, [revealed, top3.length])
+  }, [revealed, podiumGroups.length])
 
-  const visiblePlaces = REVEAL_ORDER.filter((place) => place < top3.length).slice(0, revealed)
-  const allRevealed = revealed >= top3.length
+  const visibleGroups = revealOrder.slice(0, revealed)
+  const allRevealed = revealed >= podiumGroups.length
 
   useEffect(() => {
     if (!allRevealed) return
@@ -44,37 +69,40 @@ export function PodiumView({ participants, onEnd, strings }: { participants: Par
 
       <div className="flex items-end justify-center gap-4">
         <AnimatePresence>
-          {visiblePlaces.map((place) => {
-            const p = top3[place]
-            return (
-              <motion.div
-                key={p.id}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.25 }}
-                className="flex flex-col items-center gap-2"
-              >
-                {place === 0 && <span className="text-3xl">👑</span>}
-                <p className="text-lg font-semibold">{p.nickname}</p>
-                <p className="tabular-nums text-slate-400">{p.totalScore} {s.pts}</p>
+          {visibleGroups.map((group) => (
+            <motion.div
+              key={group.rank}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.25 }}
+              className="flex flex-col items-center gap-2"
+            >
+              {group.rank === 0 && <span className="text-3xl">👑</span>}
 
-                {/* Bar grows upward from the ground */}
-                <motion.div
-                  initial={{ scaleY: 0 }}
-                  animate={{ scaleY: 1 }}
-                  style={{ originY: 1 }}
-                  transition={{ type: 'spring', stiffness: 110, damping: 18, delay: 0.15 }}
-                  className={`flex w-28 items-start justify-center rounded-t-xl pt-3 ${PODIUM_COLORS[place]} ${PLACE_HEIGHTS[place]}`}
-                >
-                  <span className="text-2xl font-bold">{s.placeLabel(place)}</span>
-                </motion.div>
+              {/* Stack all tied members above the bar */}
+              <div className="flex flex-col items-center gap-0.5">
+                {group.members.map((p) => (
+                  <p key={p.id} className="text-lg font-semibold leading-tight">{p.nickname}</p>
+                ))}
+              </div>
+              <p className="tabular-nums text-slate-400">{group.members[0].totalScore} {s.pts}</p>
+
+              {/* Bar grows upward from the ground */}
+              <motion.div
+                initial={{ scaleY: 0 }}
+                animate={{ scaleY: 1 }}
+                style={{ originY: 1 }}
+                transition={{ type: 'spring', stiffness: 110, damping: 18, delay: 0.15 }}
+                className={`flex w-28 items-start justify-center rounded-t-xl pt-3 ${PODIUM_COLORS[group.rank]} ${PLACE_HEIGHTS[group.rank]}`}
+              >
+                <span className="text-2xl font-bold">{s.placeLabel(group.rank)}</span>
               </motion.div>
-            )
-          })}
+            </motion.div>
+          ))}
         </AnimatePresence>
       </div>
 
-      {allRevealed && runnersUp.length > 0 && (
+      {allRevealed && runnersUpGroups.length > 0 && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -83,13 +111,15 @@ export function PodiumView({ participants, onEnd, strings }: { participants: Par
         >
           <p className="mb-3 text-center text-sm font-medium text-slate-500">{s.honorableMentions}</p>
           <ul className="flex flex-col gap-2">
-            {runnersUp.map((p, i) => (
-              <li key={p.id} className="flex items-center gap-4 rounded-xl border border-slate-800 bg-slate-900 px-4 py-3">
-                <span className="w-8 text-center text-sm font-bold text-slate-500">{s.placeLabel(3 + i)}</span>
-                <span className="flex-1 text-left font-medium">{p.nickname}</span>
-                <span className="tabular-nums text-slate-400">{p.totalScore} {s.pts}</span>
-              </li>
-            ))}
+            {runnersUpGroups.flatMap((group) =>
+              group.members.map((p) => (
+                <li key={p.id} className="flex items-center gap-4 rounded-xl border border-slate-800 bg-slate-900 px-4 py-3">
+                  <span className="w-8 text-center text-sm font-bold text-slate-500">{s.placeLabel(group.rank)}</span>
+                  <span className="flex-1 text-left font-medium">{p.nickname}</span>
+                  <span className="tabular-nums text-slate-400">{p.totalScore} {s.pts}</span>
+                </li>
+              ))
+            )}
           </ul>
         </motion.div>
       )}

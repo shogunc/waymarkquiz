@@ -197,13 +197,18 @@ export function HostPage() {
     const question = questions[qIndex]
     if (question) {
       if (!fakeAnswersCache.current[qIndex]) {
-        fakeAnswersCache.current[qIndex] = Array.from({ length: FAKE_CROWD_SIZE }, (_, i) => ({
+        const answers = Array.from({ length: FAKE_CROWD_SIZE }, (_, i) => ({
           participantId: `fake-${i}`,
           questionIndex: qIndex,
           guessedYear: Math.min(2026, Math.max(1900, question.correctYear + Math.floor(Math.random() * 41) - 20)),
           submittedAt: Date.now(),
           pointsEarned: null,
         }))
+        // Force pairs to tie: Alice+Bob, Charlie+Diana, Erik+Fatima.
+        answers[1].guessedYear = answers[0].guessedYear
+        answers[3].guessedYear = answers[2].guessedYear
+        answers[5].guessedYear = answers[4].guessedYear
+        fakeAnswersCache.current[qIndex] = answers
       }
       fakeAnswers = fakeAnswersCache.current[qIndex]
       if (session.phase === 'results' || session.phase === 'standings' || session.phase === 'podium') {
@@ -291,6 +296,8 @@ export function HostPage() {
               setQuiz(null)
               setQuestions(null)
               scoredQuestionIndex.current = null
+              fakeScores.current = {}
+              fakeAnswersCache.current = {}
             }}
             className="rounded-lg bg-indigo-600 px-6 py-3 font-medium hover:bg-indigo-500"
           >

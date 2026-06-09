@@ -118,7 +118,7 @@ const en: Strings = {
   },
   podium: {
     title: '🏆 Final results',
-    placeLabel: (place) => ['1st', '2nd', '3rd', '4th', '5th'][place],
+    placeLabel: (place) => { const n = place + 1; const s = n % 100 >= 11 && n % 100 <= 13 ? 'th' : n % 10 === 1 ? 'st' : n % 10 === 2 ? 'nd' : n % 10 === 3 ? 'rd' : 'th'; return `${n}${s}` },
     pts: 'pts',
     honorableMentions: 'Just missed the podium',
     endSession: 'End session',
@@ -191,7 +191,7 @@ const sv: Strings = {
   },
   podium: {
     title: '🏆 Slutresultat',
-    placeLabel: (place) => ['1:a', '2:a', '3:a', '4:a', '5:a'][place],
+    placeLabel: (place) => `${place + 1}:a`,
     pts: 'p',
     honorableMentions: 'Nästan på pallen',
     endSession: 'Avsluta',
