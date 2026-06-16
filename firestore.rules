@@ -37,6 +37,14 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // ---- App-wide config (e.g. tutorial example question) ----
+    // World-readable so host clients can fetch it during a session without
+    // being signed in as admin.
+    match /config/{key} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     // ---- Sessions: host-authoritative game state ----
 
     match /sessions/{sessionId} {

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth'
 import { auth } from '../../lib/firebase'
@@ -35,6 +35,12 @@ export function AdminLayout() {
           >
             Quizzes
           </NavLink>
+          <NavLink
+            to="tutorial"
+            className={({ isActive }) => (isActive ? 'text-indigo-400' : 'text-slate-300 hover:text-slate-100')}
+          >
+            Tutorial
+          </NavLink>
         </nav>
         <button
           className="text-sm text-slate-400 hover:text-slate-100"
@@ -56,7 +62,7 @@ function SignInForm() {
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
-  async function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
     setSubmitting(true)

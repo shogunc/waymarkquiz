@@ -5,10 +5,12 @@ import { subscribeToParticipants, setParticipantScore } from '../lib/participant
 import { subscribeToAnswersForQuestion, scoreAnswer } from '../lib/answers'
 import { getQuiz } from '../lib/quizzes'
 import { getQuestion } from '../lib/questions'
+import { getTutorialQuestionId } from '../lib/config'
 import { scoreGuess } from '../lib/scoring'
 import { STRINGS } from '../lib/strings'
 import { QuizPicker } from './host/QuizPicker'
 import { LobbyView } from './host/LobbyView'
+import { TutorialView } from './host/TutorialView'
 import { QuestionView } from './host/QuestionView'
 import { ResultsView } from './host/ResultsView'
 import { StandingsView } from './host/StandingsView'
@@ -22,6 +24,7 @@ export function HostPage() {
   const [questions, setQuestions] = useState<Question[] | null>(null)
   const [participants, setParticipants] = useState<Participant[]>([])
   const [answers, setAnswers] = useState<Answer[]>([])
+  const [tutorialQuestion, setTutorialQuestion] = useState<Question | null>(null)
   const [creating, setCreating] = useState(false)
   const [transitioning, setTransitioning] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -49,6 +52,13 @@ export function HostPage() {
     if (!session) return
     return subscribeToParticipants(session.id, setParticipants)
   }, [session?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!session?.includeTutorial) return
+    void getTutorialQuestionId().then((id) => {
+      if (id) void getQuestion(id).then((q) => setTutorialQuestion(q))
+    })
+  }, [session?.id, session?.includeTutorial]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Track answers for whichever question is currently live or just closed — results and
   // standings both still need this question's per-participant points (results to show the
@@ -114,12 +124,12 @@ export function HostPage() {
     }
   }
 
-  async function handlePickQuiz(picked: Quiz, language: Language, answerDurationSeconds: number) {
+  async function handlePickQuiz(picked: Quiz, language: Language, answerDurationSeconds: number, includeTutorial: boolean) {
     if (!hostUid) return
     setCreating(true)
     setError(null)
     try {
-      const created = await createSession(picked.id, hostUid, language, answerDurationSeconds)
+      const created = await createSession(picked.id, hostUid, language, answerDurationSeconds, includeTutorial)
       setQuiz(picked)
       setSession(created)
     } catch (e) {
@@ -134,10 +144,20 @@ export function HostPage() {
     setTransitioning(true)
     try {
       await patchSession(session.id, {
-        phase: 'preview',
+        phase: session.includeTutorial ? 'tutorial' : 'preview',
         currentQuestionIndex: 0,
         answerWindowEndsAt: null,
       })
+    } finally {
+      setTransitioning(false)
+    }
+  }
+
+  async function handleTutorialDone() {
+    if (!session) return
+    setTransitioning(true)
+    try {
+      await patchSession(session.id, { phase: 'preview' })
     } finally {
       setTransitioning(false)
     }
@@ -188,7 +208,7 @@ export function HostPage() {
   }
 
   // ---- DEBUG: simulated crowd — toggle FAKE_CROWD_ENABLED to test standings/results with many participants ----
-  const FAKE_CROWD_ENABLED = false
+  const FAKE_CROWD_ENABLED = true
   const FAKE_NAMES = ['Alice','Bob','Charlie','Diana','Erik','Fatima','Gustav','Hannah','Ivan','Julia','Karl','Lena','Marcus','Nina','Oscar','Petra','Ravi','Sara','Thomas','Ulrika']
   const FAKE_CROWD_SIZE = FAKE_NAMES.length
   let fakeAnswers: Answer[] = []
@@ -234,11 +254,15 @@ export function HostPage() {
       {error && <p className="rounded-lg border border-red-900 bg-red-950 p-3 text-sm text-red-300">{error}</p>}
 
       {!session && hostUid && (
-        <QuizPicker onPick={(q, language, answerDurationSeconds) => void handlePickQuiz(q, language, answerDurationSeconds)} busy={creating} />
+        <QuizPicker onPick={(q, language, answerDurationSeconds, includeTutorial) => void handlePickQuiz(q, language, answerDurationSeconds, includeTutorial)} busy={creating} />
       )}
 
       {session && quiz && session.phase === 'lobby' && (
         <LobbyView session={session} quiz={quiz} participants={displayParticipants} onStart={() => void handleStart()} starting={transitioning} strings={strings} />
+      )}
+
+      {session && session.phase === 'tutorial' && (
+        <TutorialView onStart={() => void handleTutorialDone()} starting={transitioning} strings={strings} language={session.language} exampleQuestion={tutorialQuestion} />
       )}
 
       {session && questions && (session.phase === 'preview' || session.phase === 'answering') && (

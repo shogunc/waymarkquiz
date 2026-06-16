@@ -40,7 +40,7 @@ export interface Quiz {
  * this round's closest guesses (and participants get their personal reveal)
  * before moving on to the running standings.
  */
-export type SessionPhase = 'lobby' | 'preview' | 'answering' | 'results' | 'standings' | 'podium' | 'ended'
+export type SessionPhase = 'lobby' | 'tutorial' | 'preview' | 'answering' | 'results' | 'standings' | 'podium' | 'ended'
 
 /** Display language for the host screen and participant views, chosen by the host at session creation. */
 export type Language = 'en' | 'sv'
@@ -56,6 +56,8 @@ export interface Session {
   language: Language
   /** Chosen by the host when starting the session; fixed answer-window length for every question. */
   answerDurationSeconds: number
+  /** Whether a how-to-play tutorial precedes the first question. */
+  includeTutorial: boolean
   currentQuestionIndex: number
   /** Epoch ms; clients render their own countdown from this. */
   answerWindowEndsAt: number | null

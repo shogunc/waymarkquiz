@@ -13,6 +13,38 @@ export const LANGUAGES: { value: Language; label: string }[] = [
 ]
 
 export interface Strings {
+  tutorial: {
+    // Navigation
+    next: string
+    startQuiz: string
+    // Page 1 — the format
+    page1Heading: string
+    page1Body: string
+    exampleTrivia: string
+    examplePrompt: string
+    // Page 2 — scoring
+    page2Heading: string
+    page2Body: string
+    correctYear: string
+    pts: string
+    scoringAnnotation: (diff: number) => string
+    // Page 3 — drill-down
+    page3Heading: string
+    page3Body: string
+    stepLabel: (n: number) => string
+    stepCenturyLabel: string
+    stepDecadeLabel: string
+    stepYearLabel: string
+    tapLocks: string
+    // Participant view
+    participantHeading: string
+    participantStep1: string
+    participantStep2: string
+    participantStep3: string
+    tryItOut: string
+    youPicked: (year: number) => string
+    tryAgain: string
+  }
   lobby: {
     joinAt: string
     waitingForPlayers: string
@@ -87,6 +119,33 @@ export interface Strings {
 }
 
 const en: Strings = {
+  tutorial: {
+    next: 'Next',
+    startQuiz: 'Start quiz',
+    page1Heading: 'Every answer is a year',
+    page1Body: 'Each question shows a piece of trivia about something historical. Your job is to guess the exact year it happened, was built, released, or born.',
+    exampleTrivia: 'This iron lattice tower was erected as the centrepiece of the 1889 World\'s Fair in Paris. At the time, it was the tallest man-made structure in the world.',
+    examplePrompt: 'In what year was the Eiffel Tower completed?',
+    page2Heading: 'Closer guess = more points',
+    page2Body: 'A perfect answer scores 10 points. Every year off costs 1 point. Ten or more years off scores 0.',
+    correctYear: 'Correct answer',
+    pts: 'pts',
+    scoringAnnotation: (diff) => diff === 0 ? 'perfect!' : `${diff} year${diff === 1 ? '' : 's'} off`,
+    page3Heading: 'Pick your year in three taps',
+    page3Body: 'On your phone, you drill down to your answer in three steps. Your last tap locks it in immediately — no confirm, no going back.',
+    stepLabel: (n) => `Step ${n}`,
+    stepCenturyLabel: 'Pick the century',
+    stepDecadeLabel: 'Pick the decade',
+    stepYearLabel: 'Pick the exact year',
+    tapLocks: 'Your last tap locks in immediately — no going back!',
+    participantHeading: 'How to play',
+    participantStep1: '1. Every question has a year as the answer.',
+    participantStep2: '2. Closer = more points. Exact = 10 pts, off by 10+ = 0 pts.',
+    participantStep3: '3. Pick your answer in three steps below. Your last tap locks it in.',
+    tryItOut: 'Try the picker — pick any year!',
+    youPicked: (year) => `You picked ${year}!`,
+    tryAgain: 'Try again',
+  },
   lobby: {
     joinAt: 'Join at',
     waitingForPlayers: 'Waiting for players…',
@@ -160,6 +219,33 @@ const en: Strings = {
 }
 
 const sv: Strings = {
+  tutorial: {
+    next: 'Nästa',
+    startQuiz: 'Starta quiz',
+    page1Heading: 'Varje svar är ett år',
+    page1Body: 'Varje fråga visar ett stycke fakta om något historiskt. Din uppgift är att gissa exakt vilket år det hände, byggdes, lanserades eller föddes.',
+    exampleTrivia: 'Det här järngittret byggdes som centrum för världsutställningen i Paris 1889. Det var vid den tidpunkten världens högsta byggnad.',
+    examplePrompt: 'Vilket år stod Eiffeltornet klart?',
+    page2Heading: 'Närmre gissning = fler poäng',
+    page2Body: 'Ett perfekt svar ger 10 poäng. Varje år du missar med kostar 1 poäng. Tio eller fler år fel ger 0 poäng.',
+    correctYear: 'Rätt svar',
+    pts: 'p',
+    scoringAnnotation: (diff) => diff === 0 ? 'perfekt!' : `${diff} år ifrån`,
+    page3Heading: 'Välj år i tre steg',
+    page3Body: 'På din telefon väljer du svaret i tre steg. Sista trycket låser svaret direkt — ingen bekräftelse, ingen återvändo.',
+    stepLabel: (n) => `Steg ${n}`,
+    stepCenturyLabel: 'Välj sekel',
+    stepDecadeLabel: 'Välj decennium',
+    stepYearLabel: 'Välj exakt år',
+    tapLocks: 'Sista trycket låser svaret direkt — ingen återvändo!',
+    participantHeading: 'Hur man spelar',
+    participantStep1: '1. Varje fråga har ett år som svar.',
+    participantStep2: '2. Närmre = fler poäng. Exakt = 10 p, 10+ år fel = 0 p.',
+    participantStep3: '3. Välj svar i tre steg nedan. Sista trycket låser svaret.',
+    tryItOut: 'Prova väljaren — välj valfritt år!',
+    youPicked: (year) => `Du valde ${year}!`,
+    tryAgain: 'Prova igen',
+  },
   lobby: {
     joinAt: 'Anslut på',
     waitingForPlayers: 'Väntar på spelare…',

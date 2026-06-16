@@ -26,7 +26,7 @@ async function joinCodeExists(joinCode: string): Promise<boolean> {
   return !snap.empty
 }
 
-export async function createSession(quizId: string, hostUid: string, language: Language, answerDurationSeconds: number): Promise<Session> {
+export async function createSession(quizId: string, hostUid: string, language: Language, answerDurationSeconds: number, includeTutorial: boolean): Promise<Session> {
   for (let attempt = 0; attempt < MAX_JOIN_CODE_ATTEMPTS; attempt++) {
     const joinCode = randomJoinCode()
     if (await joinCodeExists(joinCode)) continue
@@ -38,6 +38,7 @@ export async function createSession(quizId: string, hostUid: string, language: L
       phase: 'lobby',
       language,
       answerDurationSeconds,
+      includeTutorial,
       currentQuestionIndex: 0,
       answerWindowEndsAt: null,
       createdAt: Date.now(),

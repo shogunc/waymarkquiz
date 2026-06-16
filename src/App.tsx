@@ -9,6 +9,7 @@ const QuestionsListPage = lazy(() => import('./routes/admin/QuestionsListPage').
 const QuestionEditorPage = lazy(() => import('./routes/admin/QuestionEditorPage').then((m) => ({ default: m.QuestionEditorPage })))
 const QuizzesListPage = lazy(() => import('./routes/admin/QuizzesListPage').then((m) => ({ default: m.QuizzesListPage })))
 const QuizEditorPage = lazy(() => import('./routes/admin/QuizEditorPage').then((m) => ({ default: m.QuizEditorPage })))
+const TutorialConfigPage = lazy(() => import('./routes/admin/TutorialConfigPage').then((m) => ({ default: m.TutorialConfigPage })))
 
 function RouteFallback() {
   return <main className="flex min-h-svh items-center justify-center bg-slate-950 text-slate-400">Loading…</main>
@@ -30,6 +31,7 @@ function App() {
             <Route path="quizzes" element={<QuizzesListPage />} />
             <Route path="quizzes/new" element={<QuizEditorPage />} />
             <Route path="quizzes/:id" element={<QuizEditorPage />} />
+            <Route path="tutorial" element={<TutorialConfigPage />} />
           </Route>
         </Routes>
       </Suspense>

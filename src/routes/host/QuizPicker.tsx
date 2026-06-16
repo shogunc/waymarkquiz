@@ -10,12 +10,13 @@ export function QuizPicker({
   onPick,
   busy,
 }: {
-  onPick: (quiz: Quiz, language: Language, answerDurationSeconds: number) => void
+  onPick: (quiz: Quiz, language: Language, answerDurationSeconds: number, includeTutorial: boolean) => void
   busy: boolean
 }) {
   const [quizzes, setQuizzes] = useState<Quiz[] | null>(null)
   const [language, setLanguage] = useState<Language>('en')
   const [answerDurationSeconds, setAnswerDurationSeconds] = useState(DEFAULT_ANSWER_DURATION_SECONDS)
+  const [includeTutorial, setIncludeTutorial] = useState(true)
 
   useEffect(() => {
     void listQuizzes().then(setQuizzes)
@@ -57,6 +58,16 @@ export function QuizPicker({
           />
           seconds
         </label>
+
+        <label className="flex items-center gap-2 text-sm text-slate-400 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={includeTutorial}
+            onChange={(e) => setIncludeTutorial(e.target.checked)}
+            className="h-4 w-4 rounded accent-indigo-500"
+          />
+          Include how-to-play tutorial
+        </label>
       </div>
 
       {quizzes === null && <p className="text-slate-400">Loading…</p>}
@@ -78,7 +89,7 @@ export function QuizPicker({
                 </p>
               </div>
               <button
-                onClick={() => onPick(quiz, language, answerDurationSeconds)}
+                onClick={() => onPick(quiz, language, answerDurationSeconds, includeTutorial)}
                 disabled={busy || !validDuration || !supported}
                 className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium hover:bg-indigo-500 disabled:opacity-50"
               >

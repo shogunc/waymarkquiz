@@ -80,6 +80,10 @@ export function PlaySession({ sessionId, uid }: { sessionId: string; uid: string
     )
   }
 
+  if (session.phase === 'tutorial') {
+    return <TutorialParticipant strings={strings} />
+  }
+
   if (session.phase === 'preview') {
     return <LookAtScreen message={s.getReady} totalScore={participant.totalScore} strings={strings} />
   }
@@ -157,6 +161,49 @@ function PersonalReveal({ answer, question, strings }: { answer: Answer | null; 
         </>
       )}
     </motion.div>
+  )
+}
+
+function TutorialParticipant({ strings }: { strings: Strings }) {
+  const s = strings.tutorial
+  const [pickedYear, setPickedYear] = useState<number | null>(null)
+  const [key, setKey] = useState(0)
+
+  function handlePick(year: number) {
+    setPickedYear(year)
+  }
+
+  function handleReset() {
+    setPickedYear(null)
+    setKey((k) => k + 1)
+  }
+
+  return (
+    <div className="flex w-full flex-col gap-5">
+      <div className="flex flex-col gap-1 text-center">
+        <p className="text-xl font-semibold">{s.participantHeading}</p>
+        <p className="text-sm text-slate-400">{s.participantStep1}</p>
+        <p className="text-sm text-slate-400">{s.participantStep2}</p>
+        <p className="text-sm text-slate-400">{s.participantStep3}</p>
+      </div>
+
+      {pickedYear === null ? (
+        <>
+          <p className="text-center text-slate-500 text-sm">{s.tryItOut}</p>
+          <YearPicker key={key} onPick={handlePick} strings={strings} />
+        </>
+      ) : (
+        <div className="flex flex-col items-center gap-4 py-4 text-center">
+          <p className="text-3xl font-bold text-indigo-400">{s.youPicked(pickedYear)}</p>
+          <button
+            onClick={handleReset}
+            className="rounded-lg border border-slate-700 px-4 py-2 text-sm hover:bg-slate-800"
+          >
+            {s.tryAgain}
+          </button>
+        </div>
+      )}
+    </div>
   )
 }
 
