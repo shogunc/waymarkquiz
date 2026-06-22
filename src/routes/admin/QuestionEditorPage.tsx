@@ -1,5 +1,5 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { LanguageBadge } from '../../components/LanguageBadge'
 import { compressImageToDataUrl, dataUrlByteSize } from '../../lib/imageCompression'
 import { createQuestion, getQuestion, updateQuestion } from '../../lib/questions'
@@ -15,6 +15,8 @@ export function QuestionEditorPage() {
   const { id } = useParams()
   const isNew = id === undefined
   const navigate = useNavigate()
+  const location = useLocation()
+  const seedSubject = (location.state as { seedSubject?: string } | null)?.seedSubject ?? null
 
   const [imageData, setImageData] = useState('')
   const [trivia, setTrivia] = useState<Record<Language, string>>({ en: '', sv: '' })
@@ -98,7 +100,14 @@ export function QuestionEditorPage() {
   return (
     <div className="mx-auto grid max-w-5xl grid-cols-1 gap-8 lg:grid-cols-2">
       <form onSubmit={(e) => void handleSubmit(e)} className="flex flex-col gap-6">
-        <h1 className="text-xl font-semibold">{isNew ? 'New question' : 'Edit question'}</h1>
+        <div>
+          <h1 className="text-xl font-semibold">{isNew ? 'New question' : 'Edit question'}</h1>
+          {seedSubject && (
+            <p className="mt-2 rounded-lg border border-amber-800 bg-amber-950/50 px-3 py-2 text-sm text-amber-300">
+              Seed: {seedSubject}
+            </p>
+          )}
+        </div>
 
         <label className="flex flex-col gap-1 text-sm">
           Image
