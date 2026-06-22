@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { subscribeToSession } from '../../lib/sessions'
-import { subscribeToParticipant, leaveSession } from '../../lib/participants'
+import { subscribeToParticipant, subscribeToParticipants, leaveSession } from '../../lib/participants'
 import { subscribeToAnswer, submitAnswer } from '../../lib/answers'
 import { getQuiz } from '../../lib/quizzes'
 import { getQuestion } from '../../lib/questions'
@@ -14,6 +14,7 @@ export function PlaySession({ sessionId, uid, onLeave }: { sessionId: string; ui
   const [participant, setParticipant] = useState<Participant | null>(null)
   const [questions, setQuestions] = useState<Question[] | null>(null)
   const [answer, setAnswer] = useState<Answer | null>(null)
+  const [standingsParticipants, setStandingsParticipants] = useState<Participant[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [leaving, setLeaving] = useState(false)
 
@@ -35,6 +36,15 @@ export function PlaySession({ sessionId, uid, onLeave }: { sessionId: string; ui
     }
     return subscribeToAnswer(sessionId, uid, session.currentQuestionIndex, setAnswer)
   }, [sessionId, uid, session?.phase, session?.currentQuestionIndex])
+
+  // Only needed to show our own rank/gap on the standings and final-standings screens.
+  useEffect(() => {
+    if (!session || (session.phase !== 'standings' && session.phase !== 'podium')) {
+      setStandingsParticipants([])
+      return
+    }
+    return subscribeToParticipants(session.id, setStandingsParticipants)
+  }, [session?.id, session?.phase])
 
   async function handlePick(year: number) {
     if (!session) return
@@ -113,12 +123,18 @@ export function PlaySession({ sessionId, uid, onLeave }: { sessionId: string; ui
     return <PersonalReveal answer={answer} question={questions[session.currentQuestionIndex]} strings={strings} />
   }
 
-  if (session.phase === 'standings') {
-    return <LookAtScreen message={s.standingsUp} totalScore={participant.totalScore} strings={strings} />
-  }
-
-  if (session.phase === 'podium') {
-    return <LookAtScreen message={s.finalResultsUp} totalScore={participant.totalScore} final strings={strings} />
+  if (session.phase === 'standings' || session.phase === 'podium') {
+    if (standingsParticipants.length === 0) {
+      return <p className="text-slate-400">{s.loading}</p>
+    }
+    return (
+      <YourStanding
+        participant={participant}
+        allParticipants={standingsParticipants}
+        final={session.phase === 'podium'}
+        strings={strings}
+      />
+    )
   }
 
   if (session.phase === 'ended') {
@@ -169,6 +185,49 @@ function PersonalReveal({ answer, question, strings }: { answer: Answer | null; 
   )
 }
 
+// Proper competition rank (ties share a rank), plus the point gap to whoever has the
+// closest score above ours — or below, if no one outranks us. If several participants
+// are tied for that closest score, picks the earliest joiner among them.
+function computeStanding(me: Participant, all: Participant[]) {
+  const rank = all.filter((p) => p.totalScore > me.totalScore).length + 1
+  const above = all.filter((p) => p.totalScore > me.totalScore)
+  const below = all.filter((p) => p.totalScore < me.totalScore)
+
+  if (above.length > 0) {
+    const closest = above.reduce((min, p) => (p.totalScore < min.totalScore ? p : min))
+    return { rank, direction: 'above' as const, gap: closest.totalScore - me.totalScore, name: closest.nickname }
+  }
+  if (below.length > 0) {
+    const closest = below.reduce((max, p) => (p.totalScore > max.totalScore ? p : max))
+    return { rank, direction: 'below' as const, gap: me.totalScore - closest.totalScore, name: closest.nickname }
+  }
+  return { rank, direction: null, gap: 0, name: null }
+}
+
+function YourStanding({ participant, allParticipants, final = false, strings }: {
+  participant: Participant
+  allParticipants: Participant[]
+  final?: boolean
+  strings: Strings
+}) {
+  const s = strings.play
+  const { rank, direction, gap, name } = computeStanding(participant, allParticipants)
+  const place = strings.podium.placeLabel(rank - 1)
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="flex flex-col items-center gap-2 text-center"
+    >
+      <p className="text-lg text-slate-300">{final ? s.finalRank(place) : s.yourRank(place)}</p>
+      <p className="text-5xl font-bold tabular-nums">{participant.totalScore}</p>
+      {direction === 'above' && <p className="mt-2 text-slate-400">{s.pointsBehind(gap, name)}</p>}
+      {direction === 'below' && <p className="mt-2 text-slate-400">{s.pointsAhead(gap, name)}</p>}
+    </motion.div>
+  )
+}
+
 function TutorialParticipant({ strings }: { strings: Strings }) {
   const s = strings.tutorial
   const [pickedYear, setPickedYear] = useState<number | null>(null)
@@ -212,13 +271,13 @@ function TutorialParticipant({ strings }: { strings: Strings }) {
   )
 }
 
-function LookAtScreen({ message, totalScore, final: isFinal = false, strings }: { message: string; totalScore: number; final?: boolean; strings: Strings }) {
+function LookAtScreen({ message, totalScore, strings }: { message: string; totalScore: number; strings: Strings }) {
   const s = strings.play
   return (
     <div className="flex flex-col items-center gap-2 text-center">
       <p className="text-2xl">📺</p>
       <p className="text-lg text-slate-300">{message}</p>
-      <p className="text-slate-400">{isFinal ? s.finalScore(totalScore) : s.scoreSoFar(totalScore)}</p>
+      <p className="text-slate-400">{s.scoreSoFar(totalScore)}</p>
     </div>
   )
 }

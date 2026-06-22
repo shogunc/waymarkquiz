@@ -98,8 +98,10 @@ export interface Strings {
     waitingForOthers: string
     lockingIn: string
     getReady: string
-    standingsUp: string
-    finalResultsUp: string
+    yourRank: (place: string) => string
+    finalRank: (place: string) => string
+    pointsBehind: (points: number, name: string) => string
+    pointsAhead: (points: number, name: string) => string
     thanksForPlaying: (nickname: string) => string
     finalScore: (score: number) => string
     scoreSoFar: (score: number) => string
@@ -199,8 +201,10 @@ const en: Strings = {
     waitingForOthers: 'Waiting for the other players…',
     lockingIn: 'Locking in…',
     getReady: 'Get ready — the next question is coming up!',
-    standingsUp: 'Standings are up on the big screen!',
-    finalResultsUp: 'The final results are on the big screen! 🏆',
+    yourRank: (place) => `You're in ${place} place`,
+    finalRank: (place) => `🏆 You finished in ${place} place!`,
+    pointsBehind: (points, name) => `${points} point${points === 1 ? '' : 's'} behind ${name}`,
+    pointsAhead: (points, name) => `${points} point${points === 1 ? '' : 's'} ahead of ${name}`,
     thanksForPlaying: (nickname) => `Thanks for playing, ${nickname}!`,
     finalScore: (score) => `Your final score: ${score} points`,
     scoreSoFar: (score) => `Your score so far: ${score}`,
@@ -300,8 +304,10 @@ const sv: Strings = {
     waitingForOthers: 'Väntar på de andra spelarna…',
     lockingIn: 'Låser…',
     getReady: 'Gör dig redo — nästa fråga är på väg!',
-    standingsUp: 'Ställningen visas på storbildsskärmen!',
-    finalResultsUp: 'Slutresultatet visas på storbildsskärmen! 🏆',
+    yourRank: (place) => `Du är på ${place} plats`,
+    finalRank: (place) => `🏆 Du slutade på ${place} plats!`,
+    pointsBehind: (points, name) => `${points} poäng efter ${name}`,
+    pointsAhead: (points, name) => `${points} poäng före ${name}`,
     thanksForPlaying: (nickname) => `Tack för att du spelade, ${nickname}!`,
     finalScore: (score) => `Ditt slutresultat: ${score} poäng`,
     scoreSoFar: (score) => `Ditt resultat hittills: ${score}`,
