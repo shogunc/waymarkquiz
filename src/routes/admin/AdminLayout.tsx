@@ -47,6 +47,12 @@ export function AdminLayout() {
           >
             Seeds
           </NavLink>
+          <NavLink
+            to="settings"
+            className={({ isActive }) => (isActive ? 'text-indigo-400' : 'text-slate-300 hover:text-slate-100')}
+          >
+            Settings
+          </NavLink>
         </nav>
         <button
           className="text-sm text-slate-400 hover:text-slate-100"

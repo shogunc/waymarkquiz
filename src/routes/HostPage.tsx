@@ -5,7 +5,7 @@ import { subscribeToParticipants, setParticipantScore } from '../lib/participant
 import { subscribeToAnswersForQuestion, scoreAnswer } from '../lib/answers'
 import { getQuiz } from '../lib/quizzes'
 import { getQuestion } from '../lib/questions'
-import { getTutorialQuestionId } from '../lib/config'
+import { getTutorialQuestionId, getSimulatedCrowdEnabled } from '../lib/config'
 import { scoreGuess } from '../lib/scoring'
 import { STRINGS } from '../lib/strings'
 import { QuizPicker } from './host/QuizPicker'
@@ -25,6 +25,7 @@ export function HostPage() {
   const [participants, setParticipants] = useState<Participant[]>([])
   const [answers, setAnswers] = useState<Answer[]>([])
   const [tutorialQuestion, setTutorialQuestion] = useState<Question | null>(null)
+  const [simulatedCrowdEnabled, setSimulatedCrowdEnabled] = useState(false)
   const [creating, setCreating] = useState(false)
   const [transitioning, setTransitioning] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -36,6 +37,10 @@ export function HostPage() {
 
   useEffect(() => {
     void ensureSignedIn().then((user) => setHostUid(user.uid))
+  }, [])
+
+  useEffect(() => {
+    void getSimulatedCrowdEnabled().then(setSimulatedCrowdEnabled)
   }, [])
 
   // Once a session exists, subscribe to it and load its quiz + questions.
@@ -207,12 +212,11 @@ export function HostPage() {
     await patchSession(session.id, { phase: 'ended' })
   }
 
-  // ---- DEBUG: simulated crowd — toggle FAKE_CROWD_ENABLED to test standings/results with many participants ----
-  const FAKE_CROWD_ENABLED = true
+  // ---- Simulated crowd — toggle in /admin/settings to test standings/results with many participants ----
   const FAKE_NAMES = ['Alice','Bob','Charlie','Diana','Erik','Fatima','Gustav','Hannah','Ivan','Julia','Karl','Lena','Marcus','Nina','Oscar','Petra','Ravi','Sara','Thomas','Ulrika']
   const FAKE_CROWD_SIZE = FAKE_NAMES.length
   let fakeAnswers: Answer[] = []
-  if (FAKE_CROWD_ENABLED && session && questions) {
+  if (simulatedCrowdEnabled && session && questions) {
     const qIndex = session.currentQuestionIndex
     const question = questions[qIndex]
     if (question) {
@@ -236,15 +240,15 @@ export function HostPage() {
       }
     }
   }
-  const displayParticipants: Participant[] = FAKE_CROWD_ENABLED
+  const displayParticipants: Participant[] = simulatedCrowdEnabled
     ? Array.from({ length: FAKE_CROWD_SIZE }, (_, i) => {
         const id = `fake-${i}`
         return { id, nickname: FAKE_NAMES[i], joinedAt: 0, totalScore: fakeScores.current[id] ?? 0 }
       })
     : participants
 
-  const displayAnswers = FAKE_CROWD_ENABLED ? fakeAnswers : answers
-  // ---- END DEBUG ----
+  const displayAnswers = simulatedCrowdEnabled ? fakeAnswers : answers
+  // ---- end simulated crowd ----
 
   const strings = STRINGS[session?.language ?? 'en']
   const s = strings.sessionEnded
