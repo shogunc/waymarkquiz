@@ -81,7 +81,11 @@ service cloud.firestore {
           // ...while only the host may change totalScore.
           || isHostOf(get(/databases/$(database)/documents/sessions/$(sessionId)));
 
-        allow delete: if false;
+        // A participant may remove themselves while still in the lobby (e.g. they joined by
+        // mistake or are leaving). Once the quiz starts, leaving would desync the host's
+        // "has everyone answered" count, so it's blocked from then on.
+        allow delete: if signedIn() && request.auth.uid == participantId
+          && get(/databases/$(database)/documents/sessions/$(sessionId)).data.phase == 'lobby';
       }
 
       match /answers/{answerId} {

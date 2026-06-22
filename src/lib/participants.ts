@@ -1,4 +1,4 @@
-import { collection, doc, setDoc, updateDoc, onSnapshot, query, orderBy } from 'firebase/firestore'
+import { collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy } from 'firebase/firestore'
 import { db } from './firebase'
 import type { Participant } from '../types'
 
@@ -34,4 +34,9 @@ export function subscribeToParticipant(sessionId: string, participantId: string,
 /** Host-only: write a participant's running total after scoring a question. */
 export async function setParticipantScore(sessionId: string, participantId: string, totalScore: number): Promise<void> {
   await updateDoc(doc(participantsCol(sessionId), participantId), { totalScore })
+}
+
+/** A participant may remove themselves while the session is still in the lobby — see firestore.rules. */
+export async function leaveSession(sessionId: string, uid: string): Promise<void> {
+  await deleteDoc(doc(participantsCol(sessionId), uid))
 }

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { ensureSignedIn } from '../lib/auth'
-import { createSession, patchSession, subscribeToSession } from '../lib/sessions'
+import { createSession, getSession, patchSession, subscribeToSession } from '../lib/sessions'
 import { subscribeToParticipants, setParticipantScore } from '../lib/participants'
 import { subscribeToAnswersForQuestion, scoreAnswer } from '../lib/answers'
 import { getQuiz } from '../lib/quizzes'
@@ -17,6 +17,20 @@ import { StandingsView } from './host/StandingsView'
 import { PodiumView } from './host/PodiumView'
 import type { Answer, Language, Participant, Question, Quiz, Session } from '../types'
 
+const HOST_STORAGE_KEY = 'waymarkquiz:host-session'
+
+function loadStoredHostSessionId(): string | null {
+  return localStorage.getItem(HOST_STORAGE_KEY)
+}
+
+function storeHostSessionId(id: string) {
+  localStorage.setItem(HOST_STORAGE_KEY, id)
+}
+
+function clearStoredHostSessionId() {
+  localStorage.removeItem(HOST_STORAGE_KEY)
+}
+
 export function HostPage() {
   const [hostUid, setHostUid] = useState<string | null>(null)
   const [session, setSession] = useState<Session | null | undefined>(undefined)
@@ -26,6 +40,7 @@ export function HostPage() {
   const [answers, setAnswers] = useState<Answer[]>([])
   const [tutorialQuestion, setTutorialQuestion] = useState<Question | null>(null)
   const [simulatedCrowdEnabled, setSimulatedCrowdEnabled] = useState(false)
+  const [resuming, setResuming] = useState(true)
   const [creating, setCreating] = useState(false)
   const [transitioning, setTransitioning] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -42,6 +57,25 @@ export function HostPage() {
   useEffect(() => {
     void getSimulatedCrowdEnabled().then(setSimulatedCrowdEnabled)
   }, [])
+
+  // On first load, try to resume a session this device already started (e.g. after a refresh)
+  // instead of dropping back to the quiz picker and stranding everyone who'd already joined.
+  useEffect(() => {
+    if (!hostUid) return
+    const storedId = loadStoredHostSessionId()
+    if (!storedId) {
+      setResuming(false)
+      return
+    }
+    void getSession(storedId).then((found) => {
+      if (found && found.phase !== 'ended' && found.hostUid === hostUid) {
+        setSession(found)
+      } else {
+        clearStoredHostSessionId()
+      }
+      setResuming(false)
+    })
+  }, [hostUid])
 
   // Once a session exists, subscribe to it and load its quiz + questions.
   useEffect(() => {
@@ -135,6 +169,7 @@ export function HostPage() {
     setError(null)
     try {
       const created = await createSession(picked.id, hostUid, language, answerDurationSeconds, includeTutorial)
+      storeHostSessionId(created.id)
       setQuiz(picked)
       setSession(created)
     } catch (e) {
@@ -210,9 +245,11 @@ export function HostPage() {
   async function handleEnd() {
     if (!session) return
     await patchSession(session.id, { phase: 'ended' })
+    clearStoredHostSessionId()
   }
 
-  // ---- Simulated crowd — toggle in /admin/settings to test standings/results with many participants ----
+  // ---- Simulated crowd — toggle in /admin/settings to mix ~20 fake participants in alongside
+  // whatever real participants have joined, for testing standings/podium with a fuller crowd.
   const FAKE_NAMES = ['Alice','Bob','Charlie','Diana','Erik','Fatima','Gustav','Hannah','Ivan','Julia','Karl','Lena','Marcus','Nina','Oscar','Petra','Ravi','Sara','Thomas','Ulrika']
   const FAKE_CROWD_SIZE = FAKE_NAMES.length
   let fakeAnswers: Answer[] = []
@@ -241,13 +278,16 @@ export function HostPage() {
     }
   }
   const displayParticipants: Participant[] = simulatedCrowdEnabled
-    ? Array.from({ length: FAKE_CROWD_SIZE }, (_, i) => {
-        const id = `fake-${i}`
-        return { id, nickname: FAKE_NAMES[i], joinedAt: 0, totalScore: fakeScores.current[id] ?? 0 }
-      })
+    ? [
+        ...participants,
+        ...Array.from({ length: FAKE_CROWD_SIZE }, (_, i) => {
+          const id = `fake-${i}`
+          return { id, nickname: FAKE_NAMES[i], joinedAt: 0, totalScore: fakeScores.current[id] ?? 0 }
+        }),
+      ]
     : participants
 
-  const displayAnswers = simulatedCrowdEnabled ? fakeAnswers : answers
+  const displayAnswers = simulatedCrowdEnabled ? [...answers, ...fakeAnswers] : answers
   // ---- end simulated crowd ----
 
   const strings = STRINGS[session?.language ?? 'en']
@@ -257,7 +297,9 @@ export function HostPage() {
     <main className="flex min-h-svh flex-col items-center justify-center gap-6 bg-slate-950 p-6 text-slate-100">
       {error && <p className="rounded-lg border border-red-900 bg-red-950 p-3 text-sm text-red-300">{error}</p>}
 
-      {!session && hostUid && (
+      {hostUid && resuming && <p className="text-slate-400">Loading…</p>}
+
+      {!session && hostUid && !resuming && (
         <QuizPicker onPick={(q, language, answerDurationSeconds, includeTutorial) => void handlePickQuiz(q, language, answerDurationSeconds, includeTutorial)} busy={creating} />
       )}
 
@@ -315,6 +357,7 @@ export function HostPage() {
           <p className="text-slate-400">{s.subtitle}</p>
           <button
             onClick={() => {
+              clearStoredHostSessionId()
               setSession(null)
               setQuiz(null)
               setQuestions(null)
@@ -327,6 +370,17 @@ export function HostPage() {
             {s.startNewSession}
           </button>
         </div>
+      )}
+
+      {session && session.phase !== 'ended' && (
+        <button
+          onClick={() => {
+            if (confirm('End this session for everyone? This cannot be undone.')) void handleEnd()
+          }}
+          className="fixed bottom-3 right-3 text-xs text-slate-700 hover:text-red-400"
+        >
+          End session
+        </button>
       )}
     </main>
   )

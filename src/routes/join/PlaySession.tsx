@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { subscribeToSession } from '../../lib/sessions'
-import { subscribeToParticipant } from '../../lib/participants'
+import { subscribeToParticipant, leaveSession } from '../../lib/participants'
 import { subscribeToAnswer, submitAnswer } from '../../lib/answers'
 import { getQuiz } from '../../lib/quizzes'
 import { getQuestion } from '../../lib/questions'
@@ -9,17 +9,13 @@ import { STRINGS, type Strings } from '../../lib/strings'
 import { YearPicker } from './YearPicker'
 import type { Answer, Participant, Question, Session } from '../../types'
 
-const REVEAL_DURATION_MS = 3500
-
-export function PlaySession({ sessionId, uid }: { sessionId: string; uid: string }) {
+export function PlaySession({ sessionId, uid, onLeave }: { sessionId: string; uid: string; onLeave: () => void }) {
   const [session, setSession] = useState<Session | null | undefined>(undefined)
   const [participant, setParticipant] = useState<Participant | null>(null)
   const [questions, setQuestions] = useState<Question[] | null>(null)
   const [answer, setAnswer] = useState<Answer | null>(null)
   const [submitting, setSubmitting] = useState(false)
-  const [revealQuestionIndex, setRevealQuestionIndex] = useState<number | null>(null)
-
-  const seenRevealFor = useRef<number | null>(null)
+  const [leaving, setLeaving] = useState(false)
 
   useEffect(() => subscribeToSession(sessionId, setSession), [sessionId])
   useEffect(() => subscribeToParticipant(sessionId, uid, setParticipant), [sessionId, uid])
@@ -40,17 +36,6 @@ export function PlaySession({ sessionId, uid }: { sessionId: string; uid: string
     return subscribeToAnswer(sessionId, uid, session.currentQuestionIndex, setAnswer)
   }, [sessionId, uid, session?.phase, session?.currentQuestionIndex])
 
-  // Personal reveal: a transient, local moment shown once when the host moves to the results
-  // screen for a question we just played — independent of the synced session phase (see CLAUDE.md).
-  useEffect(() => {
-    if (!session || session.phase !== 'results') return
-    if (seenRevealFor.current === session.currentQuestionIndex) return
-    seenRevealFor.current = session.currentQuestionIndex
-    setRevealQuestionIndex(session.currentQuestionIndex)
-    const id = setTimeout(() => setRevealQuestionIndex(null), REVEAL_DURATION_MS)
-    return () => clearTimeout(id)
-  }, [session?.phase, session?.currentQuestionIndex])
-
   async function handlePick(year: number) {
     if (!session) return
     setSubmitting(true)
@@ -58,6 +43,16 @@ export function PlaySession({ sessionId, uid }: { sessionId: string; uid: string
       await submitAnswer(sessionId, uid, session.currentQuestionIndex, year)
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  async function handleLeave() {
+    setLeaving(true)
+    try {
+      await leaveSession(sessionId, uid)
+      onLeave()
+    } finally {
+      setLeaving(false)
     }
   }
 
@@ -76,6 +71,13 @@ export function PlaySession({ sessionId, uid }: { sessionId: string; uid: string
       <div className="flex flex-col items-center gap-3 text-center">
         <p className="text-2xl">{s.youreIn(participant.nickname)}</p>
         <p className="text-slate-400">{s.waitingForHost}</p>
+        <button
+          onClick={() => void handleLeave()}
+          disabled={leaving}
+          className="mt-2 rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-400 hover:bg-slate-800 disabled:opacity-50"
+        >
+          {s.leaveSession}
+        </button>
       </div>
     )
   }
@@ -108,10 +110,7 @@ export function PlaySession({ sessionId, uid }: { sessionId: string; uid: string
   }
 
   if (session.phase === 'results' && questions) {
-    if (revealQuestionIndex === session.currentQuestionIndex) {
-      return <PersonalReveal answer={answer} question={questions[session.currentQuestionIndex]} strings={strings} />
-    }
-    return <LookAtScreen message={s.resultsUp} totalScore={participant.totalScore} strings={strings} />
+    return <PersonalReveal answer={answer} question={questions[session.currentQuestionIndex]} strings={strings} />
   }
 
   if (session.phase === 'standings') {
@@ -127,6 +126,12 @@ export function PlaySession({ sessionId, uid }: { sessionId: string; uid: string
       <div className="flex flex-col items-center gap-3 text-center">
         <p className="text-2xl font-semibold">{s.thanksForPlaying(participant.nickname)}</p>
         <p className="text-slate-400">{s.finalScore(participant.totalScore)}</p>
+        <button
+          onClick={onLeave}
+          className="mt-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium hover:bg-indigo-500"
+        >
+          {s.joinNewGame}
+        </button>
       </div>
     )
   }

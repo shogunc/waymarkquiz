@@ -82,12 +82,17 @@ export function JoinPage() {
     }
   }
 
+  function handleLeave() {
+    clearStoredSession()
+    setActiveSessionId(null)
+  }
+
   return (
     <main className="flex min-h-svh flex-col items-center justify-center gap-4 bg-slate-950 p-6 text-slate-100">
       {!uid || activeSessionId === undefined ? (
         <p className="text-slate-400">Loading…</p>
       ) : activeSessionId ? (
-        <PlaySession sessionId={activeSessionId} uid={uid} />
+        <PlaySession sessionId={activeSessionId} uid={uid} onLeave={handleLeave} />
       ) : (
         <JoinForm initialCode={searchParams.get('code') ?? ''} onJoin={(code, nickname) => void handleJoin(code, nickname)} joining={joining} error={error} />
       )}

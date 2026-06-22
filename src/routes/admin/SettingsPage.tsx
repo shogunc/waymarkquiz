@@ -35,8 +35,9 @@ export function SettingsPage() {
           <div>
             <h2 className="font-medium">Simulated crowd</h2>
             <p className="mt-1 text-sm text-slate-400">
-              Fills every session with ~20 fake participants who answer randomly — useful for testing standings
-              and the podium with a crowd before a real party. Turn this off before hosting for real.
+              Mixes ~20 fake participants who answer randomly in alongside whoever actually joins — useful for
+              testing standings and the podium with a fuller crowd. Remember to turn this off before a real party
+              if you don't want it skewing the standings.
             </p>
           </div>
           <button

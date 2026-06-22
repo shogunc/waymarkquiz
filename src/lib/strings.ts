@@ -92,11 +92,12 @@ export interface Strings {
     sessionGone: string
     youreIn: (nickname: string) => string
     waitingForHost: string
+    leaveSession: string
+    joinNewGame: string
     lockedIn: (year: number) => string
     waitingForOthers: string
     lockingIn: string
     getReady: string
-    resultsUp: string
     standingsUp: string
     finalResultsUp: string
     thanksForPlaying: (nickname: string) => string
@@ -192,11 +193,12 @@ const en: Strings = {
     sessionGone: 'This session no longer exists.',
     youreIn: (nickname) => `You're in, ${nickname} 🎉`,
     waitingForHost: 'Waiting for the host to start the quiz…',
+    leaveSession: 'Leave',
+    joinNewGame: 'Join a new game',
     lockedIn: (year) => `Locked in: ${year}`,
     waitingForOthers: 'Waiting for the other players…',
     lockingIn: 'Locking in…',
     getReady: 'Get ready — the next question is coming up!',
-    resultsUp: 'The answer is revealed on the big screen!',
     standingsUp: 'Standings are up on the big screen!',
     finalResultsUp: 'The final results are on the big screen! 🏆',
     thanksForPlaying: (nickname) => `Thanks for playing, ${nickname}!`,
@@ -292,11 +294,12 @@ const sv: Strings = {
     sessionGone: 'Den här sessionen finns inte längre.',
     youreIn: (nickname) => `Du är med, ${nickname} 🎉`,
     waitingForHost: 'Väntar på att värden ska starta quizet…',
+    leaveSession: 'Lämna',
+    joinNewGame: 'Gå med i ett nytt spel',
     lockedIn: (year) => `Låst: ${year}`,
     waitingForOthers: 'Väntar på de andra spelarna…',
     lockingIn: 'Låser…',
     getReady: 'Gör dig redo — nästa fråga är på väg!',
-    resultsUp: 'Svaret visas på storbildsskärmen!',
     standingsUp: 'Ställningen visas på storbildsskärmen!',
     finalResultsUp: 'Slutresultatet visas på storbildsskärmen! 🏆',
     thanksForPlaying: (nickname) => `Tack för att du spelade, ${nickname}!`,
